@@ -60,29 +60,30 @@ async def open_webinar_announce(callback: types.CallbackQuery, state: FSMContext
 
 @router.callback_query(F.data == "webinar_register")
 async def open_webinar_register(callback: types.CallbackQuery, state: FSMContext):
-    """
-    Страница "Регистрация на вебинар"
-    (форма + кнопка оплаты через URL)
-    """
-    data = await state.get_data()
-    history = data.get("history", [])
-    current = data.get("current_screen")
+    await callback.answer("Здесь позже появится логика регистрации на вебинар", show_alert=True)
+    # """
+    # Страница "Регистрация на вебинар"
+    # (форма + кнопка оплаты через URL)
+    # """
+    # data = await state.get_data()
+    # history = data.get("history", [])
+    # current = data.get("current_screen")
 
-    if current and current != "webinar_register":
-        history.append(current)
+    # if current and current != "webinar_register":
+    #     history.append(current)
 
-    await state.update_data(
-        history=history,
-        current_screen="webinar_register",
-        screen_message_id=callback.message.message_id,
-    )
+    # await state.update_data(
+    #     history=history,
+    #     current_screen="webinar_register",
+    #     screen_message_id=callback.message.message_id,
+    # )
 
-    await callback.message.edit_text(
-        webinar_lexicon.TEXTS["webinar_register_info"],
-        reply_markup=kb_webinar_register(),
-    )
+    # await callback.message.edit_text(
+    #     webinar_lexicon.TEXTS["webinar_register_info"],
+    #     reply_markup=kb_webinar_register(),
+    # )
 
-    await callback.answer()
+    # await callback.answer()
 
 
 @router.callback_query(F.data == "webinar_pay")
