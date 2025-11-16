@@ -332,19 +332,76 @@ async def ai_choose_gender(callback: CallbackQuery, state: FSMContext, bot: Bot)
 # ================== ПОЛУЧЕНИЕ ФОТО ==================
 
 
+# @router.message(
+#     StateFilter(AIPhotoshootStates.waiting_for_photos),
+#     F.photo,
+# )
+# async def ai_receive_photo(message: types.Message, state: FSMContext):
+#     """
+#     Пользователь отправил фото.
+#     Пока что:
+#     - сохраняем file_id,
+#     - говорим, что "генерируем",
+#     - отправляем медиагруппу SAMPLE_PHOTO_IDS как условный результат,
+#     - отправляем текст с бонус-опциями.
+#     """
+#     data = await state.get_data()
+#     msg_ids: list[int] = data.get("ai_flow_message_ids", []) or []
+#     user_photos: list[str] = data.get("ai_user_photos", []) or []
+
+#     msg_ids.append(message.message_id)
+
+#     biggest_photo = max(message.photo, key=lambda p: p.width * p.height)
+#     user_photos.append(biggest_photo.file_id)
+
+#     await state.update_data(
+#         ai_flow_message_ids=msg_ids,
+#         ai_user_photos=user_photos,
+#     )
+
+#     cat_code = data.get("ai_category")
+#     cat_title = CATEGORIES.get(cat_code, "выбранная категория")
+
+#     generating_text = (
+#         "Супер! Начинаю подготовку твоей ИИ-фотосессии 📸\n\n"
+#         f"Тема: *{cat_title}*\n"
+#         "Сейчас на основе твоих фото будет сгенерировано 5 снимков."
+#     )
+
+#     gen_msg = await message.answer(
+#         generating_text,
+#         parse_mode="Markdown",
+#     )
+#     msg_ids.append(gen_msg.message_id)
+
+#     # Отправляем медиагруппу условно сгенерированных фото
+#     media = [InputMediaPhoto(media=file_id) for file_id in SAMPLE_PHOTO_IDS]
+#     album_msgs = await message.answer_media_group(media)
+#     for m in album_msgs:
+#         msg_ids.append(m.message_id)
+
+#     done_text = (
+#         "Готово! 🎉\n\n"
+#         "Пак из 5 фото по выбранной теме условно сгенерирован.\n"
+#         "Дальше мы предложим дополнительные опции:\n"
+#         "— получить ещё 1 пак за выполнение простых действий,\n"
+#         "— приобрести дополнительные генерации."
+#     )
+
+#     done_msg = await message.answer(
+#         done_text,
+#         reply_markup=build_bonus_keyboard(),
+#     )
+#     msg_ids.append(done_msg.message_id)
+
+#     await state.update_data(ai_flow_message_ids=msg_ids)
+#     await state.set_state(AIPhotoshootStates.waiting_bonus_choice)
+
 @router.message(
     StateFilter(AIPhotoshootStates.waiting_for_photos),
     F.photo,
 )
 async def ai_receive_photo(message: types.Message, state: FSMContext):
-    """
-    Пользователь отправил фото.
-    Пока что:
-    - сохраняем file_id,
-    - говорим, что "генерируем",
-    - отправляем медиагруппу SAMPLE_PHOTO_IDS как условный результат,
-    - отправляем текст с бонус-опциями.
-    """
     data = await state.get_data()
     msg_ids: list[int] = data.get("ai_flow_message_ids", []) or []
     user_photos: list[str] = data.get("ai_user_photos", []) or []
@@ -374,11 +431,9 @@ async def ai_receive_photo(message: types.Message, state: FSMContext):
     )
     msg_ids.append(gen_msg.message_id)
 
-    # Отправляем медиагруппу условно сгенерированных фото
+    # 👉 Отправляем медиагруппу, но НЕ добавляем её message_id в msg_ids
     media = [InputMediaPhoto(media=file_id) for file_id in SAMPLE_PHOTO_IDS]
-    album_msgs = await message.answer_media_group(media)
-    for m in album_msgs:
-        msg_ids.append(m.message_id)
+    await message.answer_media_group(media)
 
     done_text = (
         "Готово! 🎉\n\n"
@@ -396,8 +451,6 @@ async def ai_receive_photo(message: types.Message, state: FSMContext):
 
     await state.update_data(ai_flow_message_ids=msg_ids)
     await state.set_state(AIPhotoshootStates.waiting_bonus_choice)
-
-
 # ================== ДОП.ОПЦИИ ПОСЛЕ ПЕРВОГО ПАКА ==================
 
 
