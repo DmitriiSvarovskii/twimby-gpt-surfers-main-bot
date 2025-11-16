@@ -25,28 +25,25 @@ async def process_start_command(message: types.Message, state: FSMContext, bot: 
 
 @router.message()
 async def process_any_message(message: types.Message):
-    # Если прислали документ (PDF и любые другие файлы)
+    # Документ (PDF и т.п.)
     if message.document:
         await message.answer(
-            f"📄 Документ\n"
-            f"file_id:\n`{message.document.file_id}`\n\n"
-            f"file_unique_id:\n`{message.document.file_unique_id}`",
-            parse_mode="Markdown"
+            "📄 Документ\n"
+            f"file_id:\n{message.document.file_id}\n\n"
+            f"file_unique_id:\n{message.document.file_unique_id}"
         )
         return
 
-    # Если прислали фото (в Telegram фото → массив размеров)
+    # Фото
     if message.photo:
-        biggest = message.photo[-1]  # самое большое фото
+        biggest = message.photo[-1]  # самое большое по размеру
         await message.answer(
-            f"🖼 Фото\n"
-            f"file_id:\n`{biggest.file_id}`\n\n"
-            f"file_unique_id:\n`{biggest.file_unique_id}`",
-            parse_mode="Markdown"
+            "🖼 Фото\n"
+            f"file_id:\n{biggest.file_id}\n\n"
+            f"file_unique_id:\n{biggest.file_unique_id}"
         )
         return
 
-    # Просто текст
     await message.answer("Отправь фото или PDF, я верну file_id 🙂")
 # @router.message(CommandStart())
 # async def process_start_command(message: types.Message, state: FSMContext, bot: Bot):
