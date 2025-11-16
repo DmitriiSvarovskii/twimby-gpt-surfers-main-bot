@@ -23,9 +23,9 @@ async def process_start_command(message: types.Message, state: FSMContext, bot: 
     )
 
 
-# @router.message()
-# async def process_any_text(message: types.Message):
-#     print(message)
+@router.message()
+async def process_any_text(message: types.Message):
+    message.answer(message)
 # @router.message(CommandStart())
 # async def process_start_command(message: types.Message, state: FSMContext, bot: Bot):
 
