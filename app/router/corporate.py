@@ -30,7 +30,7 @@ from app.navigation import show_screen
 router = Router()
 
 # file_id твоего PDF из лога
-PDF_FILE_ID = "BQACAgIAAxkDAAOvaRnDXmncWZObZkJBSIQtDCIO4kIAAv2JAAId09BIuwd9l84WV0I2BA"
+PDF_FILE_ID = "BQACAgUAAxkBAAMRaRohHRc5w5zl85tQoLrN9VjAl_cAApsXAAIVstBUp69Lqylg4q82BA"
 
 
 def build_corporate_keyboard() -> InlineKeyboardMarkup:
