@@ -45,68 +45,76 @@ def build_corporate_keyboard() -> InlineKeyboardMarkup:
 @router.callback_query(F.data == "corporate")
 async def open_corporate(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Переход в раздел 'Корпоративное обучение':
-    - удаляем прошлый "экран" (если был)
-    - отправляем документ по file_id + caption + клавиатуру
+    Вписываемся в общую концепцию:
+    - prev_screen берём из current_screen
+    - сохраняем corporate_prev_screen
+    - всё остальное (отправка PDF + caption + инлайн-клава) делает show_screen
     """
-
     data = await state.get_data()
-    prev_screen = data.get("current_screen")
-    screen_message_id = data.get("screen_message_id")
+    prev_screen = data.get("current_screen") or "start"
 
-    # 1. Удаляем предыдущее экранное сообщение, если оно было
-    if screen_message_id is not None:
-        try:
-            await bot.delete_message(
-                chat_id=callback.message.chat.id,
-                message_id=screen_message_id,
-            )
-        except Exception:
-            pass
-        await state.update_data(screen_message_id=None)
+    await state.update_data(corporate_prev_screen=prev_screen)
 
-    # 2. Отправляем документ по file_id с подписью и кнопками
-    text = corporate_lexicon.TEXTS["corporate_main"]
-
-    msg = await callback.message.answer_document(
-        document=PDF_FILE_ID,
-        caption=text,
-        reply_markup=build_corporate_keyboard(),
-    )
-
-    # 3. Сохраняем id экранного сообщения
-    await state.update_data(
-        current_screen="corporate",
-        corporate_prev_screen=prev_screen,
-        screen_message_id=msg.message_id,
+    await show_screen(
+        target=callback,
+        state=state,
+        bot=bot,
+        screen_id="corporate",
+        as_new_message=False,   # пробуем редактировать текущее сообщение
+        push_history=False,
     )
 
     await callback.answer()
+# @router.callback_query(F.data == "corporate")
+# async def open_corporate(callback: CallbackQuery, state: FSMContext, bot: Bot):
+#     """
+#     Переход в раздел 'Корпоративное обучение':
+#     - удаляем прошлый "экран" (если был)
+#     - отправляем документ по file_id + caption + клавиатуру
+#     """
+
+#     data = await state.get_data()
+#     prev_screen = data.get("current_screen")
+#     screen_message_id = data.get("screen_message_id")
+
+#     # 1. Удаляем предыдущее экранное сообщение, если оно было
+#     if screen_message_id is not None:
+#         try:
+#             await bot.delete_message(
+#                 chat_id=callback.message.chat.id,
+#                 message_id=screen_message_id,
+#             )
+#         except Exception:
+#             pass
+#         await state.update_data(screen_message_id=None)
+
+#     # 2. Отправляем документ по file_id с подписью и кнопками
+#     text = corporate_lexicon.TEXTS["corporate_main"]
+
+#     msg = await callback.message.answer_document(
+#         document=PDF_FILE_ID,
+#         caption=text,
+#         reply_markup=build_corporate_keyboard(),
+#     )
+
+#     # 3. Сохраняем id экранного сообщения
+#     await state.update_data(
+#         current_screen="corporate",
+#         corporate_prev_screen=prev_screen,
+#         screen_message_id=msg.message_id,
+#     )
+
+#     await callback.answer()
 
 
 @router.callback_query(F.data == "corporate_back")
 async def corporate_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Кнопка 'Назад':
-    - удаляем сообщение с документом
-    - возвращаемся на предыдущий экран
+    Возврат с экрана 'corporate' на экран, откуда пришли.
+    Сообщение не удаляем — отрисовкой занимается show_screen.
     """
-
     data = await state.get_data()
     prev_screen = data.get("corporate_prev_screen") or "academy"
-    msg_id = data.get("screen_message_id")
-    chat_id = callback.message.chat.id
-
-    # 1. Удаляем сообщение с PDF
-    if msg_id:
-        try:
-            await bot.delete_message(chat_id, msg_id)
-        except Exception:
-            pass
-
-    await state.update_data(screen_message_id=None)
-
-    # 2. Возвращаем предыдущий экран
     await show_screen(
         target=callback,
         state=state,
@@ -117,6 +125,39 @@ async def corporate_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     )
 
     await callback.answer()
+# @router.callback_query(F.data == "corporate_back")
+# async def corporate_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
+#     """
+#     Кнопка 'Назад':
+#     - удаляем сообщение с документом
+#     - возвращаемся на предыдущий экран
+#     """
+
+#     data = await state.get_data()
+#     prev_screen = data.get("corporate_prev_screen") or "academy"
+#     msg_id = data.get("screen_message_id")
+#     chat_id = callback.message.chat.id
+
+#     # 1. Удаляем сообщение с PDF
+#     if msg_id:
+#         try:
+#             await bot.delete_message(chat_id, msg_id)
+#         except Exception:
+#             pass
+
+#     await state.update_data(screen_message_id=None)
+
+#     # 2. Возвращаем предыдущий экран
+#     await show_screen(
+#         target=callback,
+#         state=state,
+#         bot=bot,
+#         screen_id=prev_screen,
+#         as_new_message=False,
+#         push_history=False,
+#     )
+
+#     await callback.answer()
 
 
 class CorporateRequestStates(StatesGroup):

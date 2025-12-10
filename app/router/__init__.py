@@ -12,6 +12,7 @@ from .pricing import router as pricing_router
 from .program_view import router as program_view_router
 from .start import router as start_router
 from .webinar_register import router as webinar_register_router
+from .webinar import router as webinar_router
 from .navigation import router as navigation_router
 
 router = Router(name=__name__)
@@ -30,4 +31,5 @@ router.include_routers(
     program_view_router,
     webinar_register_router,
     navigation_router,
+    webinar_router,
 )

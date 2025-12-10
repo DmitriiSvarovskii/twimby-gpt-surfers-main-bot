@@ -1,13 +1,21 @@
 # app/router/pricing.py
 
 from aiogram import Router, F, types, Bot
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import (
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+    CallbackQuery,
+    FSInputFile,
+)
 
 from app.lexicon import pricing as pricing_lexicon
 from app.navigation import show_screen
 
 router = Router()
+
+PRICING_PHOTO_PATH = "app/static/pricing/pricing.png"
 
 # Описание тарифов: какой текст и какая ссылка
 PRICING_PLANS = [
@@ -79,38 +87,74 @@ def get_pricing_text(index: int) -> str:
 @router.callback_query(F.data == "pricing")
 async def open_pricing(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Первый вход в раздел тарифов.
-    Теперь: НЕ отправляем новое сообщение, а редактируем текущее.
+    Первый вход в раздел тарифов:
+    - берём prev_screen из current_screen
+    - пытаемся превратить текущее экранное сообщение в фото с тарифом
+    - если редактирование медиа не удалось — удаляем старое экранное и шлём новое фото
+    - screen_message_id указывает на сообщение с фото тарифов
     """
     data = await state.get_data()
-    prev_screen = data.get("current_screen")  # откуда пришли (обычно 'academy')
+    prev_screen = data.get("current_screen") or "start"
+    screen_message_id = data.get("screen_message_id")
+    chat_id = callback.message.chat.id
 
     index = 0
+    text = get_pricing_text(index)
+    photo = FSInputFile(PRICING_PHOTO_PATH)
+
+    media = types.InputMediaPhoto(
+        media=photo,
+        caption=text,
+    )
+
+    msg_obj = None
+
+    if screen_message_id:
+        # пробуем заменить текущее "экранное" сообщение на фото с тарифом
+        try:
+            msg_obj = await bot.edit_message_media(
+                chat_id=chat_id,
+                message_id=screen_message_id,
+                media=media,
+                reply_markup=build_pricing_keyboard(index),
+            )
+        except TelegramBadRequest:
+            # например, там был чистый текст — удаляем и создаём новый экран
+            try:
+                await bot.delete_message(chat_id, screen_message_id)
+            except Exception:
+                pass
+
+            msg_obj = await callback.message.answer_photo(
+                photo=photo,
+                caption=text,
+                reply_markup=build_pricing_keyboard(index),
+            )
+    else:
+        # экранного сообщения ещё нет — просто отправляем фото
+        msg_obj = await callback.message.answer_photo(
+            photo=photo,
+            caption=text,
+            reply_markup=build_pricing_keyboard(index),
+        )
 
     await state.update_data(
         pricing_index=index,
         pricing_prev_screen=prev_screen,
         current_screen="pricing",
-    )
-
-    text = get_pricing_text(index)
-
-    # 🔴 Раньше здесь было answer(...) → новое сообщение
-    # ✅ Теперь редактируем то же сообщение
-    await callback.message.edit_text(
-        text,
-        reply_markup=build_pricing_keyboard(index),
+        screen_message_id=msg_obj.message_id,
     )
 
     await callback.answer()
 
 
 @router.callback_query(F.data.in_(["pricing_prev", "pricing_next"]))
-async def pricing_switch(callback: CallbackQuery, state: FSMContext):
+async def pricing_switch(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
     Листаем тарифы по кругу:
       - на 3/3 вправо → 1/3
       - на 1/3 влево → 3/3
+    Всегда одно и то же фото, меняется только caption + клавиатура.
     """
     data = await state.get_data()
     index = data.get("pricing_index", 0)
@@ -124,10 +168,29 @@ async def pricing_switch(callback: CallbackQuery, state: FSMContext):
 
     text = get_pricing_text(index)
 
-    await callback.message.edit_text(
-        text,
-        reply_markup=build_pricing_keyboard(index),
-    )
+    try:
+        # в нормальном случае это фото → меняем только caption и кнопки
+        await callback.message.edit_caption(
+            caption=text,
+            reply_markup=build_pricing_keyboard(index),
+        )
+    except TelegramBadRequest:
+        # на всякий случай, если почему-то сообщение оказалось не фото — пересоздаём экран
+        chat_id = callback.message.chat.id
+        photo = FSInputFile(PRICING_PHOTO_PATH)
+
+        try:
+            await bot.delete_message(chat_id, callback.message.message_id)
+        except Exception:
+            pass
+
+        msg = await callback.message.answer_photo(
+            photo=photo,
+            caption=text,
+            reply_markup=build_pricing_keyboard(index),
+        )
+
+        await state.update_data(screen_message_id=msg.message_id)
 
     await callback.answer()
 
@@ -144,8 +207,9 @@ async def pricing_page_info(callback: CallbackQuery):
 async def pricing_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
     Кнопка "Назад" в тарифах:
-    - НЕ удаляем сообщение
-    - просто возвращаем предыдущий экран, редактируя это же сообщение
+    - ничего не удаляем руками
+    - просто возвращаемся на prev_screen через show_screen,
+      которое само аккуратно приведёт экран к нужному виду
     """
     data = await state.get_data()
     prev_screen = data.get("pricing_prev_screen") or "academy"

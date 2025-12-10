@@ -140,52 +140,53 @@ async def ai_photoshoot_start(callback: CallbackQuery, state: FSMContext, bot: B
     2) Отправляем ОДНО фото с описанием бота (INTRO_PHOTO_ID).
     3) Отправляем отдельное сообщение с выбором категорий.
     """
-    data = await state.get_data()
-    prev_screen = data.get("current_screen") or "start"
-    screen_message_id = data.get("screen_message_id")
-    chat_id = callback.message.chat.id
+    await callback.answer("Данный раздел в разработке, скоро будет доступен ☺️", show_alert=True)
+    # data = await state.get_data()
+    # prev_screen = data.get("current_screen") or "start"
+    # screen_message_id = data.get("screen_message_id")
+    # chat_id = callback.message.chat.id
 
-    # Удаляем прошлый "экран"
-    if screen_message_id:
-        try:
-            await bot.delete_message(chat_id, screen_message_id)
-        except Exception:
-            pass
+    # # Удаляем прошлый "экран"
+    # if screen_message_id:
+    #     try:
+    #         await bot.delete_message(chat_id, screen_message_id)
+    #     except Exception:
+    #         pass
 
-    intro_caption = (
-        "Загрузи свои фото — и выбери категорию съёмки: зимняя сказка, серфинг, "
-        "фотосессия с животными, путешествия, деловой.\n"
-        "Через несколько минут получишь серию реалистичных снимков.\n\n"
-        "В боте ежемесячно доступно 5 направлений фотосессии. "
-        "Они меняются ежемесячно исходя из трендов и не только."
-    )
+    # intro_caption = (
+    #     "Загрузи свои фото — и выбери категорию съёмки: зимняя сказка, серфинг, "
+    #     "фотосессия с животными, путешествия, деловой.\n"
+    #     "Через несколько минут получишь серию реалистичных снимков.\n\n"
+    #     "В боте ежемесячно доступно 5 направлений фотосессии. "
+    #     "Они меняются ежемесячно исходя из трендов и не только."
+    # )
 
-    # Фото-обложка с описанием
-    intro_msg = await callback.message.answer_photo(
-        photo=INTRO_PHOTO_ID,
-        caption=intro_caption,
-    )
+    # # Фото-обложка с описанием
+    # intro_msg = await callback.message.answer_photo(
+    #     photo=INTRO_PHOTO_ID,
+    #     caption=intro_caption,
+    # )
 
-    # Под фото — сообщение с выбором категории
-    categories_msg = await callback.message.answer(
-        "Выбери категорию ИИ-фотосессии:",
-        reply_markup=build_categories_keyboard(),
-    )
+    # # Под фото — сообщение с выбором категории
+    # categories_msg = await callback.message.answer(
+    #     "Выбери категорию ИИ-фотосессии:",
+    #     reply_markup=build_categories_keyboard(),
+    # )
 
-    flow_ids = [intro_msg.message_id, categories_msg.message_id]
+    # flow_ids = [intro_msg.message_id, categories_msg.message_id]
 
-    await state.update_data(
-        ai_prev_screen=prev_screen,
-        current_screen="ai_photoshoot",
-        screen_message_id=categories_msg.message_id,
-        ai_flow_message_ids=flow_ids,
-        ai_category=None,
-        ai_gender=None,
-        ai_user_photos=[],
-    )
+    # await state.update_data(
+    #     ai_prev_screen=prev_screen,
+    #     current_screen="ai_photoshoot",
+    #     screen_message_id=categories_msg.message_id,
+    #     ai_flow_message_ids=flow_ids,
+    #     ai_category=None,
+    #     ai_gender=None,
+    #     ai_user_photos=[],
+    # )
 
-    await state.set_state(AIPhotoshootStates.choosing_category)
-    await callback.answer()
+    # await state.set_state(AIPhotoshootStates.choosing_category)
+    # await callback.answer()
 
 
 # ================== ВЫБОР КАТЕГОРИИ ==================
