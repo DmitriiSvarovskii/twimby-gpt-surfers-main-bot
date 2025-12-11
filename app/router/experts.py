@@ -20,8 +20,8 @@ EXPERTS = [
     {"key": "expert_ilya", "photo": "app/static/expert/Илья_Шитов.jpg"},
     {"key": "expert_alexander", "photo": "app/static/expert/Александр_Масленников.jpg"},
     {"key": "expert_eduard", "photo": "app/static/expert/Эдуард_Эргашев.jpg"},
-    {"key": "expert_mikhail", "photo": "app/static/expert/no_photo.png"},
-    {"key": "expert_maxim", "photo": "app/static/expert/no_photo.png"},
+    {"key": "expert_mikhail", "photo": "app/static/expert/МИША.jpg"},
+    {"key": "expert_maxim", "photo": "app/static/expert/МАКС.jpg"},
 ]
 
 TOTAL_EXPERTS = len(EXPERTS)
