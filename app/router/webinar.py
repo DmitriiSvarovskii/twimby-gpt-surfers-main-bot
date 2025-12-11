@@ -225,6 +225,7 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
         f"Имя: {name}",
         f"Ник в Telegram: {nick}",
         f"Email: {email}",
+        "#вебинар",
     ]
     admin_text = "\n".join(parts)
 

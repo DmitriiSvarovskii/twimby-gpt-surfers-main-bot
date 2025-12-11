@@ -44,9 +44,6 @@ def build_corporate_keyboard() -> InlineKeyboardMarkup:
 
 @router.callback_query(F.data == "corporate")
 async def open_corporate(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """
-    Открытие экрана 'Корпоративное обучение' через общий навигатор.
-    """
     data = await state.get_data()
     prev_screen = data.get("current_screen") or "start"
 
@@ -66,9 +63,6 @@ async def open_corporate(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data == "corporate_back")
 async def corporate_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    """
-    Назад с экрана 'Корпоративное обучение' на предыдущий экран.
-    """
     data = await state.get_data()
     prev_screen = data.get("corporate_prev_screen") or "academy"
 
@@ -84,10 +78,11 @@ async def corporate_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await callback.answer()
 
 
-# ====== НОВЫЙ СЦЕНАРИЙ ЗАЯВКИ: ТОЛЬКО КОНТАКТ ======
+# ========= НОВЫЙ ФЛОУ ЗАЯВКИ: КОНТАКТ + ПОДТВЕРЖДЕНИЕ =========
 
 class CorporateRequestStates(StatesGroup):
     waiting_contact = State()
+    waiting_confirm = State()
 
 
 @router.callback_query(F.data == "corporate_request")
@@ -95,11 +90,10 @@ async def corporate_request_start(callback: CallbackQuery, state: FSMContext):
     """
     Старт сценария:
     - удаляем сообщение с PDF/кнопками
-    - отправляем текст с reply-клавой: Поделиться контактом / Отменить
+    - отправляем текст + reply-клаву "Поделиться контактом" / "Отменить"
     """
     chat_id = callback.message.chat.id
 
-    # удаляем текущее экранное сообщение (PDF + кнопки)
     try:
         await callback.message.delete()
     except Exception:
@@ -121,6 +115,9 @@ async def corporate_request_start(callback: CallbackQuery, state: FSMContext):
 
     await state.update_data(
         corp_flow_message_ids=[msg.message_id],
+        corp_contact_name=None,
+        corp_contact_phone=None,
+        corp_contact_user_id=None,
     )
 
     await state.set_state(CorporateRequestStates.waiting_contact)
@@ -133,29 +130,84 @@ async def corporate_request_start(callback: CallbackQuery, state: FSMContext):
     StateFilter(CorporateRequestStates.waiting_contact),
     F.contact,
 )
-async def corporate_receive_contact(message: types.Message, state: FSMContext, bot: Bot):
+async def corporate_receive_contact(message: types.Message, state: FSMContext):
     data = await state.get_data()
     msg_ids: list[int] = data.get("corp_flow_message_ids", []) or []
     msg_ids.append(message.message_id)
     chat_id = message.chat.id
 
-    contact = message.contact  # объект Contact из Telegram
+    contact = message.contact
     user = message.from_user
 
-    # 1. Шлём админу информацию о заявке
-    if contact:
-        contact_name = f"{contact.first_name or ''} {contact.last_name or ''}".strip()
-        phone = contact.phone_number or "-"
-        tg_id = contact.user_id or user.id if user else "-"
-    else:
-        contact_name = user.full_name if user else "-"
-        phone = "-"
-        tg_id = user.id if user else "-"
+    contact_name = (
+        f"{contact.first_name or ''} {contact.last_name or ''}".strip()
+        if contact else (user.full_name if user else "-")
+    )
+    phone = contact.phone_number if contact and contact.phone_number else "-"
+    tg_id = contact.user_id if contact and contact.user_id else (user.id if user else "-")
 
+    await state.update_data(
+        corp_flow_message_ids=msg_ids,
+        corp_contact_name=contact_name,
+        corp_contact_phone=phone,
+        corp_contact_user_id=tg_id,
+    )
+
+    # убираем reply-клавиатуру
+    tmp = await message.answer("Сейчас покажу сводку вашей заявки 👇", reply_markup=ReplyKeyboardRemove())
+    msg_ids.append(tmp.message_id)
+
+    # инлайн-клава подтверждения
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="Отправить заявку",
+                    callback_data="corporate_submit",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="Отменить",
+                    callback_data="corporate_cancel_flow",
+                )
+            ],
+        ]
+    )
+
+    confirm_text = (
+        "Подтвердите вашу заявку и нажав «Отправить заявку»."
+    )
+
+    confirm_msg = await message.answer(confirm_text, reply_markup=kb)
+    msg_ids.append(confirm_msg.message_id)
+
+    await state.update_data(corp_flow_message_ids=msg_ids)
+    await state.set_state(CorporateRequestStates.waiting_confirm)
+
+
+# ---- пользователь нажал ОТПРАВИТЬ ЗАЯВКУ ----
+
+@router.callback_query(
+    StateFilter(CorporateRequestStates.waiting_confirm),
+    F.data == "corporate_submit",
+)
+async def corporate_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    msg_ids: list[int] = data.get("corp_flow_message_ids", []) or []
+    msg_ids.append(callback.message.message_id)
+
+    chat_id = callback.message.chat.id
+
+    contact_name = data.get("corp_contact_name", "-")
+    phone = data.get("corp_contact_phone", "-")
+    tg_id = data.get("corp_contact_user_id", "-")
+
+    user = callback.from_user
     if user and user.username:
-        header = f"💸 💸 💸 \nНовая #заявка на корпоративное обучение от @{user.username}"
+        header = f"💸 💸 💸 \nНовая заявка на корпоративное обучение от @{user.username}"
     else:
-        header = f"💸 💸 💸 \nНовая #заявка на корпоративное обучение (user_id: {tg_id})"
+        header = f"💸 💸 💸 \nНовая заявка на корпоративное обучение (user_id: {tg_id})"
 
     parts = [
         header,
@@ -163,30 +215,29 @@ async def corporate_receive_contact(message: types.Message, state: FSMContext, b
         f"Имя (из контакта): {contact_name}",
         f"Телефон: {phone}",
         f"Telegram user id: {tg_id}",
+        "#корпоративное_обучение",
     ]
     admin_text = "\n".join(parts)
 
+    # 1. алёрт пользователю
+    await callback.answer("Спасибо! Мы с вами свяжемся в Telegram в ближайшее время", show_alert=True)
+
+    # 2. шлём заявку админу
     try:
         await bot.send_message(settings.ADMINT_CHAT, admin_text)
     except Exception:
         pass
 
-    # 2. Удаляем служебные сообщения сценария (вопрос + контакт)
+    # 3. удаляем все служебные сообщения сценария
     for mid in set(msg_ids):
         try:
             await bot.delete_message(chat_id, mid)
         except Exception:
             pass
 
-    # 3. Убираем reply-клавиатуру и говорим спасибо
-    await message.answer(
-        "Спасибо! Мы с вами свяжемся в Telegram в ближайшее время",
-        reply_markup=ReplyKeyboardRemove(),
-    )
-
-    # 4. Открываем снова экран "Корпоративное обучение"
+    # 4. возвращаем экран корпоративного обучения
     await show_screen(
-        target=message,
+        target=callback,
         state=state,
         bot=bot,
         screen_id="corporate",
@@ -194,43 +245,84 @@ async def corporate_receive_contact(message: types.Message, state: FSMContext, b
         push_history=False,
     )
 
-    # 5. Чистим временные данные и выходим из FSM
+    # 5. чистим состояние
     await state.update_data(
         corp_flow_message_ids=None,
+        corp_contact_name=None,
+        corp_contact_phone=None,
+        corp_contact_user_id=None,
     )
     await state.set_state(None)
 
 
-# ---- пользователь нажал "Отменить" (текст) ----
+# ---- пользователь нажал ОТМЕНИТЬ (inline) ----
+
+@router.callback_query(
+    StateFilter(CorporateRequestStates.waiting_confirm),
+    F.data == "corporate_cancel_flow",
+)
+async def corporate_cancel_flow(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    msg_ids: list[int] = data.get("corp_flow_message_ids", []) or []
+    msg_ids.append(callback.message.message_id)
+    chat_id = callback.message.chat.id
+
+    # 1. алёрт
+    await callback.answer("Заявка отменена", show_alert=True)
+
+    # 2. удаляем все служебные сообщения
+    for mid in set(msg_ids):
+        try:
+            await bot.delete_message(chat_id, mid)
+        except Exception:
+            pass
+
+    # 3. возвращаем экран corporate
+    await show_screen(
+        target=callback,
+        state=state,
+        bot=bot,
+        screen_id="corporate",
+        as_new_message=True,
+        push_history=False,
+    )
+
+    await state.update_data(
+        corp_flow_message_ids=None,
+        corp_contact_name=None,
+        corp_contact_phone=None,
+        corp_contact_user_id=None,
+    )
+    await state.set_state(None)
+
+
+# ---- пользователь нажал "Отменить" ТЕКСТОМ на шаге контакта ----
 
 @router.message(
     StateFilter(CorporateRequestStates.waiting_contact),
     F.text == "Отменить",
 )
-async def corporate_cancel(message: types.Message, state: FSMContext, bot: Bot):
+async def corporate_cancel_text(message: types.Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     msg_ids: list[int] = data.get("corp_flow_message_ids", []) or []
     msg_ids.append(message.message_id)
     chat_id = message.chat.id
 
-    # 1. Удаляем все служебные сообщения
+    # удаляем все служебные сообщения
     for mid in set(msg_ids):
         try:
             await bot.delete_message(chat_id, mid)
         except Exception:
             pass
 
-    # 2. Убираем клавиатуру через техническое сообщение
-    tmp = await message.answer(
-        ".",
-        reply_markup=ReplyKeyboardRemove(),
-    )
+    # убираем клаву сервисным сообщением
+    tmp = await message.answer(".", reply_markup=ReplyKeyboardRemove())
     try:
         await bot.delete_message(chat_id, tmp.message_id)
     except Exception:
         pass
 
-    # 3. Возвращаем экран корпоративного обучения
+    # возвращаем корпоративный экран
     await show_screen(
         target=message,
         state=state,
@@ -242,6 +334,9 @@ async def corporate_cancel(message: types.Message, state: FSMContext, bot: Bot):
 
     await state.update_data(
         corp_flow_message_ids=None,
+        corp_contact_name=None,
+        corp_contact_phone=None,
+        corp_contact_user_id=None,
     )
     await state.set_state(None)
 

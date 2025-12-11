@@ -343,11 +343,11 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
     # 3. отправляем вопрос в админ-чат
     user = callback.from_user
     if user and user.username:
-        header = f"❔❓\nНовый #вопрос от пользователя @{user.username}"
+        header = f"❔❓\nНовый вопрос от пользователя @{user.username}"
     elif user:
-        header = f"❔❓\nНовый #вопрос от пользователя (id: {user.id})"
+        header = f"❔❓\nНовый вопрос от пользователя (id: {user.id})"
     else:
-        header = "❔❓\nНовый #вопрос от пользователя"
+        header = "❔❓\nНовый вопрос от пользователя"
 
     parts = [header, ""]
 
@@ -361,7 +361,7 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
         contact_block = f"{phone} {fio}".strip()
         parts.append("Контакт:")
         parts.append(contact_block)
-
+    parts.append("#задать_вопрос")
     admin_text = "\n".join(parts) if parts else "Новый вопрос (данные не получены)"
 
     try:
