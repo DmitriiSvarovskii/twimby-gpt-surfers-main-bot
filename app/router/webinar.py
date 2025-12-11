@@ -29,20 +29,20 @@ class WebinarRegisterStates(StatesGroup):
 
 # ======= СТАРТ РЕГИСТРАЦИИ (ИЗ КНОПОК 11/18 ДЕКАБРЯ) =======
 
-@router.callback_query(F.data.in_(["webinar_11_register", "webinar_18_register"]))
+@router.callback_query(F.data.in_(["webinar_18_register", "webinar_21_register"]))
 async def webinar_register_start(callback: CallbackQuery, state: FSMContext):
     """
     Старт регистрации на вебинар.
     В callback.data лежит info, на какой именно вебинар:
-    - webinar_11_register
     - webinar_18_register
+    - webinar_21_register
     """
 
     # вытащим код вебинара
-    if callback.data == "webinar_11_register":
-        webinar_code = "11 декабря"
-    else:
+    if callback.data == "webinar_18_register":
         webinar_code = "18 декабря"
+    else:
+        webinar_code = "21 декабря"
 
     kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Отменить")]],

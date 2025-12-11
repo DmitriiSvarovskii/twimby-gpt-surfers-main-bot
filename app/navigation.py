@@ -58,8 +58,8 @@ SCREENS: Dict[str, ScreenConfig] = {
 
         file_path="app/static/webinar/efiry.png",
     ),
-    "webinar_11": ScreenConfig(lex_webinar, "webinar_11_details", "webinar_11"),
     "webinar_18": ScreenConfig(lex_webinar, "webinar_18_details", "webinar_18"),
+    "webinar_21": ScreenConfig(lex_webinar, "webinar_21_details", "webinar_21"),
 
 
     "ask_question": ScreenConfig(lex_ask_question, "ask_question_intro", "ask_question"),

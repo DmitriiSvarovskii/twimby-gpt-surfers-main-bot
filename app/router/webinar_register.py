@@ -21,17 +21,6 @@ async def open_webinar_main(callback: CallbackQuery, state: FSMContext, bot: Bot
     await callback.answer()
 
 
-@router.callback_query(F.data == "webinar_11")
-async def open_webinar_11(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    await show_screen(
-        target=callback,
-        state=state,
-        bot=bot,
-        screen_id="webinar_11",
-    )
-    await callback.answer()
-
-
 @router.callback_query(F.data == "webinar_18")
 async def open_webinar_18(callback: CallbackQuery, state: FSMContext, bot: Bot):
     await show_screen(
@@ -39,6 +28,17 @@ async def open_webinar_18(callback: CallbackQuery, state: FSMContext, bot: Bot):
         state=state,
         bot=bot,
         screen_id="webinar_18",
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data == "webinar_21")
+async def open_webinar_21(callback: CallbackQuery, state: FSMContext, bot: Bot):
+    await show_screen(
+        target=callback,
+        state=state,
+        bot=bot,
+        screen_id="webinar_21",
     )
     await callback.answer()
 
