@@ -140,7 +140,7 @@ async def open_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
     carousel_msg = await send_photo_with_fallback(
         message=callback.message,
         bot=bot,
-        file_id=program_cfg.get("file_id"),     # если есть
+        file_id=PROGRAM_CFG.get("file_id"),     # если есть
         file_path=PROGRAM_PHOTO_PATH,           # путь
         caption=text,
         reply_markup=kb,
