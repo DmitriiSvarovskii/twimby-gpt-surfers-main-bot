@@ -154,7 +154,7 @@ async def corporate_receive_contact(message: types.Message, state: FSMContext):
     )
 
     # убираем reply-клавиатуру
-    tmp = await message.answer("Сейчас покажу сводку вашей заявки 👇", reply_markup=ReplyKeyboardRemove())
+    tmp = await message.answer("Отсался один шаг.", reply_markup=ReplyKeyboardRemove())
     msg_ids.append(tmp.message_id)
 
     # инлайн-клава подтверждения
@@ -176,7 +176,7 @@ async def corporate_receive_contact(message: types.Message, state: FSMContext):
     )
 
     confirm_text = (
-        "Подтвердите вашу заявку и нажав «Отправить заявку»."
+        "Подтвердите вашу заявку и нажмите «Отправить заявку»."
     )
 
     confirm_msg = await message.answer(confirm_text, reply_markup=kb)
