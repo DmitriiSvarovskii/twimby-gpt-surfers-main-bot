@@ -27,7 +27,10 @@ PROGRAM_PAGE_KEYS = [
     "program_page_6",
     "program_page_7",
 ]
-
+PROGRAM_CFG = {
+    "file_id": "AgACAgIAAxkBAAIDvmk6waq-xWgGvZpaDP0Ug4oRyxmaAALTDGsbmfrZSRKOXQcftEFXAQADAgADeQADNgQ",  # или сохранённый file_id картинки
+    "file_path": "app/static/программа.png",
+}
 TOTAL_PAGES = len(PROGRAM_PAGE_KEYS)
 
 
@@ -53,6 +56,39 @@ def get_program_text(page_index: int) -> str:
     """Только текст модуля, без превью."""
     text_key = PROGRAM_PAGE_KEYS[page_index]
     return program_lexicon.TEXTS[text_key].strip()
+
+
+async def send_photo_with_fallback(
+    message,
+    bot,
+    file_id: str | None,
+    file_path: str,
+    caption: str,
+    reply_markup=None
+):
+    """
+    Пытаемся отправить фото по file_id.
+    Если file_id невалидный → отправляем через путь (FSInputFile).
+    """
+
+    # 1. Попытка отправить по file_id
+    if file_id:
+        try:
+            return await message.answer_photo(
+                photo=file_id,
+                caption=caption,
+                reply_markup=reply_markup,
+            )
+        except TelegramBadRequest:
+            pass  # Падаем на fallback
+
+    # 2. Fallback — отправка через путь
+    photo = FSInputFile(file_path)
+    return await message.answer_photo(
+        photo=photo,
+        caption=caption,
+        reply_markup=reply_markup,
+    )
 
 
 @router.callback_query(F.data == "program")
@@ -96,12 +132,19 @@ async def open_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
     kb = build_program_keyboard(page_index)
     photo = FSInputFile(PROGRAM_PHOTO_PATH)
 
-    carousel_msg = await callback.message.answer_photo(
-        photo=photo,
+    # carousel_msg = await callback.message.answer_photo(
+    #     photo=photo,
+    #     caption=text,
+    #     reply_markup=kb,
+    # )
+    carousel_msg = await send_photo_with_fallback(
+        message=callback.message,
+        bot=bot,
+        file_id=program_cfg.get("file_id"),     # если есть
+        file_path=PROGRAM_PHOTO_PATH,           # путь
         caption=text,
         reply_markup=kb,
     )
-
     await state.update_data(
         program_page=page_index,
         program_prev_screen=prev_screen,
