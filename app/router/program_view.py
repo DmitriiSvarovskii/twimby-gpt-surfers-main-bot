@@ -12,13 +12,12 @@ from aiogram.types import (
 from aiogram.exceptions import TelegramBadRequest
 
 from app.lexicon import program_view as program_lexicon
-from app.navigation import show_screen  # используем для "Назад" на предыдущий экран
+from app.navigation import show_screen
 
 router = Router()
 
 PROGRAM_PHOTO_PATH = "app/static/программа.png"
 
-# список ключей страниц в лексиконе
 PROGRAM_PAGE_KEYS = [
     "program_page_1",
     "program_page_2",
@@ -33,12 +32,7 @@ TOTAL_PAGES = len(PROGRAM_PAGE_KEYS)
 
 
 def build_program_keyboard(page_index: int) -> InlineKeyboardMarkup:
-    """
-    Клавиатура:
-    ←    1/7    →
-    [Назад]
-    """
-    current_page = page_index + 1  # человек видит нумерацию с 1
+    current_page = page_index + 1
     center_text = f"{current_page}/{TOTAL_PAGES}"
 
     keyboard = [
@@ -56,71 +50,64 @@ def build_program_keyboard(page_index: int) -> InlineKeyboardMarkup:
 
 
 def get_program_text(page_index: int) -> str:
-    """
-    Сверху — program_preview, ниже — текст конкретной страницы.
-    """
-    preview = program_lexicon.TEXTS.get("program_preview", "").strip()
-    page_key = PROGRAM_PAGE_KEYS[page_index]
-    page_text = program_lexicon.TEXTS[page_key].strip()
-
-    if preview:
-        return f"{preview}\n{page_text}"
-    return page_text
+    """Только текст модуля, без превью."""
+    text_key = PROGRAM_PAGE_KEYS[page_index]
+    return program_lexicon.TEXTS[text_key].strip()
 
 
 @router.callback_query(F.data == "program")
 async def open_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Первый заход в раздел "Программа".
-    Всегда показываем фото PROGRAM_PHOTO_PATH + caption (preview + страница 1/7).
+    Логика как у экспертов:
+    - удаляем прошлый экран (screen_message_id), если был
+    - (на всякий) удаляем старый program_preview_message_id, если остался
+    - отправляем отдельным сообщением program_preview
+    - после него отправляем фото с модулем 1/7 + карусель
     """
     data = await state.get_data()
     prev_screen = data.get("current_screen") or "start"
-    screen_message_id = data.get("screen_message_id")
+    old_screen_msg_id = data.get("screen_message_id")
+    old_preview_msg_id = data.get("program_preview_message_id")
     chat_id = callback.message.chat.id
 
+    # 1. Удаляем старый "экран" (если был)
+    if old_screen_msg_id:
+        try:
+            await bot.delete_message(chat_id, old_screen_msg_id)
+        except Exception:
+            pass
+
+    # 2. На всякий случай сносим старый превью-текст, если остался
+    if old_preview_msg_id:
+        try:
+            await bot.delete_message(chat_id, old_preview_msg_id)
+        except Exception:
+            pass
+
+    # 3. Отправляем превью-текст (отдельное сообщение)
+    preview_text = program_lexicon.TEXTS.get("program_preview", "").strip()
+    preview_msg = None
+    if preview_text:
+        preview_msg = await callback.message.answer(preview_text)
+
+    # 4. Отправляем фото-карусель с модулем 1/7
     page_index = 0
     text = get_program_text(page_index)
     kb = build_program_keyboard(page_index)
     photo = FSInputFile(PROGRAM_PHOTO_PATH)
 
-    msg_id_result = None
-
-    # Пытаемся превратить текущее сообщение в фото с caption
-    if screen_message_id is not None and screen_message_id == callback.message.message_id:
-        try:
-            media = InputMediaPhoto(media=photo, caption=text)
-            await callback.message.edit_media(
-                media=media,
-                reply_markup=kb,
-            )
-            msg_id_result = callback.message.message_id
-        except TelegramBadRequest:
-            # не получилось (был текст/другое) — удаляем и шлём новое фото
-            try:
-                await bot.delete_message(chat_id, screen_message_id)
-            except Exception:
-                pass
-            msg = await callback.message.answer_photo(
-                photo=photo,
-                caption=text,
-                reply_markup=kb,
-            )
-            msg_id_result = msg.message_id
-    else:
-        # screen_message_id ещё не зафиксирован — просто шлём фото
-        msg = await callback.message.answer_photo(
-            photo=photo,
-            caption=text,
-            reply_markup=kb,
-        )
-        msg_id_result = msg.message_id
+    carousel_msg = await callback.message.answer_photo(
+        photo=photo,
+        caption=text,
+        reply_markup=kb,
+    )
 
     await state.update_data(
         program_page=page_index,
         program_prev_screen=prev_screen,
+        program_preview_message_id=preview_msg.message_id if preview_msg else None,
         current_screen="program",
-        screen_message_id=msg_id_result,
+        screen_message_id=carousel_msg.message_id,  # главный "экран" = карусель
     )
 
     await callback.answer()
@@ -129,7 +116,8 @@ async def open_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
 @router.callback_query(F.data.in_(["program_prev", "program_next"]))
 async def program_switch(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Листаем модули влево/вправо по caption у одного и того же фото.
+    Листаем модули по caption у одного и того же фото.
+    Превью-текст остаётся отдельным сообщением сверху, мы его не трогаем.
     """
     data = await state.get_data()
     page = data.get("program_page", 0)
@@ -145,14 +133,15 @@ async def program_switch(callback: CallbackQuery, state: FSMContext, bot: Bot):
     kb = build_program_keyboard(page)
 
     try:
-        # нормальный путь — просто меняем caption у фото
         await callback.message.edit_caption(
             caption=text,
             reply_markup=kb,
         )
     except TelegramBadRequest:
-        # если вдруг сообщение оказалось текстовым — дожимаем до нужного формата
+        # если вдруг сообщение стало текстовым — пересобираем экран
+        chat_id = callback.message.chat.id
         photo = FSInputFile(PROGRAM_PHOTO_PATH)
+
         try:
             media = InputMediaPhoto(media=photo, caption=text)
             await callback.message.edit_media(
@@ -160,7 +149,6 @@ async def program_switch(callback: CallbackQuery, state: FSMContext, bot: Bot):
                 reply_markup=kb,
             )
         except TelegramBadRequest:
-            # крайний случай — шлём новое фото
             msg = await callback.message.answer_photo(
                 photo=photo,
                 caption=text,
@@ -173,27 +161,38 @@ async def program_switch(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
 @router.callback_query(F.data == "program_page_info")
 async def program_page_info(callback: CallbackQuery):
-    """
-    Средняя "кнопка" с индикатором 1/7 — неактивная.
-    """
     await callback.answer()
 
 
 @router.callback_query(F.data == "program_back")
 async def program_back(callback: CallbackQuery, state: FSMContext, bot: Bot):
     """
-    Кнопка "Назад" в программе:
-    возвращает на тот экран, с которого зашли в раздел "Программа".
+    Назад из программы:
+    - удаляем только превью-текст
+    - отдаём текущее сообщение (карусель) под управление show_screen
+      → оно превратится в предыдущий экран
     """
     data = await state.get_data()
     prev_screen = data.get("program_prev_screen") or "academy"
+    preview_msg_id = data.get("program_preview_message_id")
+    chat_id = callback.message.chat.id
 
+    # Удаляем превью-текст
+    if preview_msg_id:
+        try:
+            await bot.delete_message(chat_id, preview_msg_id)
+        except Exception:
+            pass
+
+    # Чистим служебные поля программы
     await state.update_data(
         program_page=None,
         program_prev_screen=None,
+        program_preview_message_id=None,
         current_screen=prev_screen,
     )
 
+    # Возвращаем предыдущий экран через общий навигатор
     await show_screen(
         target=callback,
         state=state,
