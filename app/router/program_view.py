@@ -13,6 +13,7 @@ from aiogram.exceptions import TelegramBadRequest
 
 from app.lexicon import program_view as program_lexicon
 from app.navigation import show_screen
+from app.utils.send_photo import send_photo_with_fallback
 
 router = Router()
 
@@ -58,37 +59,37 @@ def get_program_text(page_index: int) -> str:
     return program_lexicon.TEXTS[text_key].strip()
 
 
-async def send_photo_with_fallback(
-    message,
-    bot,
-    file_id: str | None,
-    file_path: str,
-    caption: str,
-    reply_markup=None
-):
-    """
-    Пытаемся отправить фото по file_id.
-    Если file_id невалидный → отправляем через путь (FSInputFile).
-    """
+# async def send_photo_with_fallback(
+#     message,
+#     bot,
+#     file_id: str | None,
+#     file_path: str,
+#     caption: str,
+#     reply_markup=None
+# ):
+#     """
+#     Пытаемся отправить фото по file_id.
+#     Если file_id невалидный → отправляем через путь (FSInputFile).
+#     """
 
-    # 1. Попытка отправить по file_id
-    if file_id:
-        try:
-            return await message.answer_photo(
-                photo=file_id,
-                caption=caption,
-                reply_markup=reply_markup,
-            )
-        except TelegramBadRequest:
-            pass  # Падаем на fallback
+#     # 1. Попытка отправить по file_id
+#     if file_id:
+#         try:
+#             return await message.answer_photo(
+#                 photo=file_id,
+#                 caption=caption,
+#                 reply_markup=reply_markup,
+#             )
+#         except TelegramBadRequest:
+#             pass  # Падаем на fallback
 
-    # 2. Fallback — отправка через путь
-    photo = FSInputFile(file_path)
-    return await message.answer_photo(
-        photo=photo,
-        caption=caption,
-        reply_markup=reply_markup,
-    )
+#     # 2. Fallback — отправка через путь
+#     photo = FSInputFile(file_path)
+#     return await message.answer_photo(
+#         photo=photo,
+#         caption=caption,
+#         reply_markup=reply_markup,
+#     )
 
 
 @router.callback_query(F.data == "program")
@@ -130,7 +131,7 @@ async def open_program(callback: CallbackQuery, state: FSMContext, bot: Bot):
     page_index = 0
     text = get_program_text(page_index)
     kb = build_program_keyboard(page_index)
-    photo = FSInputFile(PROGRAM_PHOTO_PATH)
+    # photo = FSInputFile(PROGRAM_PHOTO_PATH)
 
     # carousel_msg = await callback.message.answer_photo(
     #     photo=photo,

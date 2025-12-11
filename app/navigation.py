@@ -42,7 +42,13 @@ class ScreenConfig:
 
 SCREENS: Dict[str, ScreenConfig] = {
     "start": ScreenConfig(lex_start, "start", "start", "photo", file_path="app/static/start/surfers_main.png"),
-    "academy": ScreenConfig(lex_academy, "academy_about", "academy_about", "photo", file_path="app/static/academy/academy.png"),
+    "academy": ScreenConfig(
+        lex_academy,
+        "academy_about",
+        "academy_about",
+        "photo",
+        file_id="AgACAgIAAxkBAAID0Wk6xaVkqlJY1wzneAAB55oDJ2vouAACCA1rG5n62UlDWnZbppEDdgEAAwIAA3kAAzYE",
+        file_path="app/static/academy/academy.png"),
     "ai_test": ScreenConfig(lex_ai_testing, "ai_test_intro", "ai_test"),
     # "pricing": ScreenConfig(lex_pricing, "pricing_intro", "pricing", "photo", file_path="app/static/pricing/pricing.png"),
 
@@ -56,7 +62,7 @@ SCREENS: Dict[str, ScreenConfig] = {
         text_key="webinar_main",
         buttons_key="webinar",
         media_type="photo",
-
+        file_id="AgACAgIAAxkBAAID02k6xgg2eiACMB8u84dt5boxDrqWAALVD2sbYZvYSfXauI7zn43wAQADAgADeQADNgQ",
         file_path="app/static/webinar/efiry.png",
     ),
     "webinar_18": ScreenConfig(lex_webinar, "webinar_18_details", "webinar_18"),
@@ -69,7 +75,7 @@ SCREENS: Dict[str, ScreenConfig] = {
         "corporate_main",
         "corporate",
         media_type="document",
-        file_id="BQACAgUAAxkBAAMRaRohHRc5w5zl85tQoLrN9VjAl_cAApsXAAIVstBUp69Lqylg4q82BA",
+        file_id="BQACAgIAAxkBAAID1Wk6xoEezFUEYLGNiqg6wwysR5fzAAKUhgACmfrZSVN11a9h5tNCNgQ",
         file_path="app/static/program/GPT Surfers.pdf"
     ),
     "program": ScreenConfig(lex_program, "program_intro", "program_navigation"),
@@ -80,7 +86,7 @@ SCREENS: Dict[str, ScreenConfig] = {
         text_key="jobs_main",
         buttons_key="jobs",
         media_type="photo",
-        file_id=None,
+        file_id="AgACAgIAAxkBAAID12k6xqLDbHPD-r7J9vvz1TXyF2sVAAIVDWsbmfrZScLVmgTc4C9dAQADAgADeQADNgQ",
         file_path="app/static/jobs.jpg",
     ),
 }
