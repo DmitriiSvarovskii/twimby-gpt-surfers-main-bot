@@ -8,11 +8,44 @@ from app.navigation import show_screen
 router = Router(name=__name__)
 
 
+START_LOG_CHAT_ID = -5041400670   # id группы, куда шлём лог /start
+
+
 @router.message(CommandStart())
 async def process_start_command(message: types.Message, state: FSMContext, bot: Bot):
-
     await state.clear()
 
+    user = message.from_user
+
+    # Собираем текст для логирования
+    parts: list[str] = ["🚀 Новый /start"]
+
+    if user:
+        parts.append(f"ID: {user.id}")
+
+        # Имя и фамилия, если есть
+        name_bits = []
+        if user.first_name:
+            name_bits.append(user.first_name)
+        if user.last_name:
+            name_bits.append(user.last_name)
+        if name_bits:
+            parts.append("Имя: " + " ".join(name_bits))
+
+        # username, если есть
+        if user.username:
+            parts.append(f"Username: @{user.username}")
+
+    log_text = "\n".join(parts)
+
+    # Пытаемся отправить сообщение в группу
+    try:
+        await bot.send_message(START_LOG_CHAT_ID, log_text)
+    except Exception:
+        # Логгировать/проглотить — по желанию
+        pass
+
+    # Рисуем стартовый экран пользователю
     await show_screen(
         target=message,
         state=state,

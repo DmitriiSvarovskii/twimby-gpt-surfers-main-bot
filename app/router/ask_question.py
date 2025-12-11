@@ -342,6 +342,8 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     # 3. отправляем вопрос в админ-чат
     user = callback.from_user
+    user_id = user.id if user else "-"
+
     if user and user.username:
         header = f"❔❓\nНовый вопрос от пользователя @{user.username}"
     elif user:
@@ -350,6 +352,10 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
         header = "❔❓\nНовый вопрос от пользователя"
 
     parts = [header, ""]
+
+    # явно добавляем ID отдельно
+    parts.append(f"ID пользователя: {user_id}")
+    parts.append("")
 
     if question_text:
         parts.append("Текст вопроса:")
@@ -361,6 +367,7 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
         contact_block = f"{phone} {fio}".strip()
         parts.append("Контакт:")
         parts.append(contact_block)
+
     parts.append("#задать_вопрос")
     admin_text = "\n".join(parts) if parts else "Новый вопрос (данные не получены)"
 
@@ -386,8 +393,8 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
     )
     await state.set_state(None)
 
-
 # ==== отмена на этапе подтверждения (inline) ====
+
 
 @router.callback_query(
     StateFilter(AskQuestionStates.waiting_confirm),

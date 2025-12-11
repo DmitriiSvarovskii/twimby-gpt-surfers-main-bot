@@ -179,7 +179,6 @@ async def webinar_email(message: types.Message, state: FSMContext):
 
 
 # ======= ПОДТВЕРЖДЕНИЕ (INLINE) =======
-
 @router.callback_query(
     StateFilter(WebinarRegisterStates.waiting_confirm),
     F.data == "webinar_submit",
@@ -211,6 +210,8 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     # 3. отправляем заявку в админ-чат
     user = callback.from_user
+    user_id = user.id if user else "-"
+
     if user and user.username:
         header = f"🎓 Новая заявка на вебинар от @{user.username}"
     elif user:
@@ -221,6 +222,7 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
     parts = [
         header,
         "",
+        f"ID пользователя: {user_id}",
         f"Вебинар: {webinar_code}",
         f"Имя: {name}",
         f"Ник в Telegram: {nick}",
