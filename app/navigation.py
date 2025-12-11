@@ -41,7 +41,14 @@ class ScreenConfig:
 
 
 SCREENS: Dict[str, ScreenConfig] = {
-    "start": ScreenConfig(lex_start, "start", "start", "photo", file_path="app/static/start/surfers_main.png"),
+    "start": ScreenConfig(
+        lex_start,
+        "start",
+        "start",
+        "photo",
+        file_id="AgACAgIAAxkBAAID3Wk6yB_HoTJlf_k685IbR7D5e0LiAAIgDWsbmfrZSQdFTWT02w_0AQADAgADeQADNgQ",
+        file_path="app/static/start/surfers_main.png"
+        ),
     "academy": ScreenConfig(
         lex_academy,
         "academy_about",
