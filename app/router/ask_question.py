@@ -366,8 +366,8 @@ async def submit_question(callback: CallbackQuery, state: FSMContext, bot: Bot):
 
     try:
         await bot.send_message(settings.ADMINT_CHAT, admin_text)
-    except Exception:
-        pass
+    except Exception as e:
+        print(e)
 
     # 4. alert пользователю
     thanks_text = ask_question_lexicon.TEXTS.get(
