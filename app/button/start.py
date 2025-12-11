@@ -6,5 +6,6 @@ BUTTONS = {
         {"text": "Регистрация на вебинар", "callback": "webinar_main"},
         {"text": "Корпоративное обучение", "callback": "corporate"},
         {"text": "Задать вопрос", "callback": "ask_question"},
+        {"text": "Вакансии", "callback": "jobs"},
     ]
 }

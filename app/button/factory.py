@@ -13,6 +13,7 @@ from . import (
     ask_question,
     lead_form,
     ai_photoshoot,
+    jobs
 )
 
 # Собираем единый реестр кнопок
@@ -30,6 +31,7 @@ for module in (
     ask_question,
     lead_form,
     ai_photoshoot,
+    jobs
 ):
     if hasattr(module, "BUTTONS"):
         BUTTONS_REGISTRY.update(module.BUTTONS)

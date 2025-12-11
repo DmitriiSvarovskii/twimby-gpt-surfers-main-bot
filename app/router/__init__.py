@@ -14,6 +14,7 @@ from .start import router as start_router
 from .webinar_register import router as webinar_register_router
 from .webinar import router as webinar_router
 from .navigation import router as navigation_router
+from .jobs import router as jobs_router
 
 router = Router(name=__name__)
 
@@ -32,4 +33,5 @@ router.include_routers(
     webinar_register_router,
     navigation_router,
     webinar_router,
+    jobs_router,
 )

@@ -22,17 +22,17 @@ PRICING_PLANS = [
     {
         "key": "pricing_first_wave",
         "button_text": "Оплатить FIRST WAVE",
-        "url": "https://gptsurfers.ai/#order:%D0%A2%D0%B0%D1%80%D0%B8%D1%84%20FIRST%20WAVE%20=35000",
+        "url": "https://gptsurfers.ai/#tarif",
     },
     {
         "key": "pricing_big_wave",
         "button_text": "Оплатить BIG WAVE",
-        "url": "https://gptsurfers.ai/#order:%D0%A2%D0%B0%D1%80%D0%B8%D1%84%20BIG%20WAVE%20=45000",
+        "url": "https://gptsurfers.ai/#tarif",
     },
     {
         "key": "pricing_corporate",
         "button_text": "Оставить заявку",
-        "url": "https://gptsurfers.ai/#popup:myform",
+        "callback": "corporate_request",
     },
 ]
 

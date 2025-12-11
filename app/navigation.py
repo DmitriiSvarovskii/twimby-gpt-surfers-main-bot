@@ -17,6 +17,7 @@ from app.lexicon import start as lex_start
 from app.lexicon import academy as lex_academy
 from app.lexicon import ai_testing as lex_ai_testing
 from app.lexicon import pricing as lex_pricing
+from app.lexicon import jobs as lex_jobs
 from app.lexicon import webinar as lex_webinar
 from app.lexicon import ask_question as lex_ask_question
 from app.lexicon import corporate as lex_corporate
@@ -74,6 +75,14 @@ SCREENS: Dict[str, ScreenConfig] = {
     "program": ScreenConfig(lex_program, "program_intro", "program_navigation"),
     "experts": ScreenConfig(lex_experts, "experts_intro", "experts_navigation", "photo"),
     "ai_photoshoot": ScreenConfig(lex_photoshoot, "ai_photoshoot_intro", "ai_photoshoot"),
+    "jobs": ScreenConfig(
+        text_module=lex_jobs,
+        text_key="jobs_main",
+        buttons_key="jobs",
+        media_type="photo",
+        file_id=None,
+        file_path="app/static/jobs.jpg",
+    ),
 }
 
 
