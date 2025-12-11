@@ -1,5 +1,5 @@
 from aiogram.fsm.context import FSMContext
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import CommandStart
 from aiogram import Bot
 
