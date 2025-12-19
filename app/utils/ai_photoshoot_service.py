@@ -181,7 +181,7 @@ async def generate_photoshoot_pack(
         ai_photo_prompts,
         category_key=category_key,
         gender=gender,
-        limit=1,  # было 1
+        limit=5,  # было 1
     )
     if not items:
         raise RuntimeError(f"No prompts for category={category_key}, gender={gender}")
