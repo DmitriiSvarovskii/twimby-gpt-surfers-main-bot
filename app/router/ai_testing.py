@@ -10,6 +10,7 @@ from aiogram.types import (
     InputMediaPhoto,
 )
 from aiogram.exceptions import TelegramBadRequest
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, WebAppInfo
 
 from app.lexicon import ai_testing as ai_testing_lexicon
 
@@ -22,7 +23,7 @@ AI_TEST_PHOTO_PATH = "app/static/start/surfers_main.jpg"
 def build_ai_test_keyboard() -> InlineKeyboardMarkup:
     """
     Клавиатура:
-    [Пройти тест]
+    [Пройти тест] (Web App)
     [Назад]
     """
     return InlineKeyboardMarkup(
@@ -30,7 +31,7 @@ def build_ai_test_keyboard() -> InlineKeyboardMarkup:
             [
                 InlineKeyboardButton(
                     text="Пройти тест",
-                    url=AI_TEST_URL,
+                    web_app=WebAppInfo(url=AI_TEST_URL),
                 )
             ],
             [
