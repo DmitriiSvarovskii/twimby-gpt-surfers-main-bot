@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     BOT_TOKEN: str
 
     ADMINT_CHAT: str
+    TELEGRAM_CHANEL: int
 
     @property
     def DB_URL(self):

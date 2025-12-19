@@ -15,6 +15,7 @@ from .webinar_register import router as webinar_register_router
 from .webinar import router as webinar_router
 from .navigation import router as navigation_router
 from .jobs import router as jobs_router
+from .social_network import router as social_network_router
 
 router = Router(name=__name__)
 
@@ -34,4 +35,5 @@ router.include_routers(
     navigation_router,
     webinar_router,
     jobs_router,
+    social_network_router,
 )

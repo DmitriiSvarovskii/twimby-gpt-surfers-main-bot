@@ -1,5 +1,6 @@
 # app/router/webinar_register.py
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from aiogram import Router, F, Bot, types
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -12,7 +13,7 @@ from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
 )
-
+from app.services.webinars.registrations import register_user_for_webinar
 from app.config import settings
 
 router = Router()
@@ -29,7 +30,8 @@ class WebinarRegisterStates(StatesGroup):
 
 # ======= СТАРТ РЕГИСТРАЦИИ (ИЗ КНОПОК 11/18 ДЕКАБРЯ) =======
 
-@router.callback_query(F.data.in_(["webinar_18_register", "webinar_21_register"]))
+@router.callback_query(F.data.startswith("webinar:register:"))
+# @router.callback_query(F.data.in_(["webinar_18_register", "webinar_21_register"]))
 async def webinar_register_start(callback: CallbackQuery, state: FSMContext):
     """
     Старт регистрации на вебинар.
@@ -38,11 +40,20 @@ async def webinar_register_start(callback: CallbackQuery, state: FSMContext):
     - webinar_21_register
     """
 
-    # вытащим код вебинара
-    if callback.data == "webinar_18_register":
-        webinar_code = "18 декабря"
-    else:
-        webinar_code = "21 декабря"
+    webinar_id = int(callback.data.split(":")[-1])
+
+    # Попробуем красиво показать название (если оно есть в кеше)
+    webinar_title = f"#{webinar_id}"
+    try:
+        from app.services.webinars.cache import get_upcoming_webinars
+        from app.db.redis_client import redis_client
+
+        webinars = await get_upcoming_webinars(redis_client)
+        w = next((x for x in webinars if x.id == webinar_id), None)
+        if w:
+            webinar_title = w.title
+    except Exception:
+        pass
 
     kb = ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="Отменить")]],
@@ -51,13 +62,14 @@ async def webinar_register_start(callback: CallbackQuery, state: FSMContext):
     )
 
     msg = await callback.message.answer(
-        f"Регистрация на вебинар {webinar_code}.\n\nКак тебя зовут?",
+        f"Регистрация на вебинар {webinar_title}.\n\nКак тебя зовут?",
         reply_markup=kb,
     )
 
     await state.update_data(
         webinar_flow_message_ids=[msg.message_id],
-        webinar_code=webinar_code,
+        webinar_id=webinar_id,
+        webinar_title=webinar_title,
         webinar_name=None,
         webinar_nick=None,
         webinar_email=None,
@@ -92,6 +104,7 @@ async def webinar_name(message: types.Message, state: FSMContext):
 
 
 # ======= ШАГ 2 — НИК В TELEGRAM =======
+
 
 @router.message(
     StateFilter(WebinarRegisterStates.waiting_nick),
@@ -133,7 +146,7 @@ async def webinar_email(message: types.Message, state: FSMContext):
     )
 
     data = await state.get_data()
-    webinar_code = data.get("webinar_code", "-")
+    webinar_title = data.get("webinar_title", "-")
     name = data.get("webinar_name", "-")
     nick = data.get("webinar_nick", "-")
     email = data.get("webinar_email", "-")
@@ -164,7 +177,7 @@ async def webinar_email(message: types.Message, state: FSMContext):
 
     confirm_text = (
         f"Проверь, всё ли верно:\n\n"
-        f"• Вебинар: {webinar_code}\n"
+        f"• Вебинар: {webinar_title}\n"
         f"• Имя: {name}\n"
         f"• Ник в Telegram: {nick}\n"
         f"• Почта: {email}\n\n"
@@ -183,14 +196,19 @@ async def webinar_email(message: types.Message, state: FSMContext):
     StateFilter(WebinarRegisterStates.waiting_confirm),
     F.data == "webinar_submit",
 )
-async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
+async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot, session: AsyncSession):
     data = await state.get_data()
     msg_ids: list[int] = data.get("webinar_flow_message_ids", []) or []
     msg_ids.append(callback.message.message_id)
 
     chat_id = callback.message.chat.id
 
-    webinar_code = data.get("webinar_code", "-")
+    webinar_title = data.get("webinar_title", "-")
+    webinar_id = data.get("webinar_id")
+    if webinar_id is None:
+        await callback.answer("Не удалось определить вебинар. Вернись в список и попробуй снова.", show_alert=True)
+        return
+
     name = data.get("webinar_name", "-")
     nick = data.get("webinar_nick", "-")
     email = data.get("webinar_email", "-")
@@ -207,10 +225,18 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
         "Спасибо! Твоя заявка на вебинар отправлена. Мы свяжемся с тобой в Telegram.",
         show_alert=True,
     )
-
-    # 3. отправляем заявку в админ-чат
     user = callback.from_user
-    user_id = user.id if user else "-"
+    user_id = user.id
+
+    await register_user_for_webinar(
+        session=session,
+        tg_id=user_id,
+        webinar_id=webinar_id,
+        name=name,
+        nick=nick,
+        email=email,
+    )
+    # 3. отправляем заявку в админ-чат
 
     if user and user.username:
         header = f"🎓 Новая заявка на вебинар от @{user.username}"
@@ -223,7 +249,7 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
         header,
         "",
         f"ID пользователя: {user_id}",
-        f"Вебинар: {webinar_code}",
+        f"Вебинар: {webinar_title}",
         f"Имя: {name}",
         f"Ник в Telegram: {nick}",
         f"Email: {email}",
@@ -239,7 +265,8 @@ async def webinar_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot):
     # 4. чистим данные
     await state.update_data(
         webinar_flow_message_ids=None,
-        webinar_code=None,
+        webinar_id=None,
+        webinar_title=None,
         webinar_name=None,
         webinar_nick=None,
         webinar_email=None,
@@ -282,7 +309,8 @@ async def webinar_cancel_text(message: types.Message, state: FSMContext, bot: Bo
 
     await state.update_data(
         webinar_flow_message_ids=None,
-        webinar_code=None,
+        webinar_id=None,
+        webinar_title=None,
         webinar_name=None,
         webinar_nick=None,
         webinar_email=None,
@@ -313,7 +341,8 @@ async def webinar_cancel_flow(callback: CallbackQuery, state: FSMContext, bot: B
 
     await state.update_data(
         webinar_flow_message_ids=None,
-        webinar_code=None,
+        webinar_id=None,
+        webinar_title=None,
         webinar_name=None,
         webinar_nick=None,
         webinar_email=None,

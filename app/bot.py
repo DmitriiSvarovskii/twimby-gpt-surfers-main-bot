@@ -10,7 +10,8 @@ from aiogram.fsm.storage.redis import RedisStorage, Redis
 from app.config import settings
 from app.router import router as main_router
 from app.utils import set_menu
-
+from app.db.postgres import async_session_maker  # путь поправь под твой файл
+from app.middlewares.db_session import DbSessionMiddleware
 
 sys.path.insert(0, os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../app")))
@@ -35,6 +36,7 @@ async def main():
     storage = RedisStorage(redis=redis)
     dp: Dispatcher = Dispatcher(storage=storage)
     dp.include_router(main_router)
+    dp.update.middleware(DbSessionMiddleware(async_session_maker))
 
     await set_menu.create_set_main_menu(bot)
 

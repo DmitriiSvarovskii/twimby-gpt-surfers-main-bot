@@ -12,18 +12,20 @@ from aiogram.types import (
     InputMediaDocument,
     InputMediaVideo,
 )
-from aiogram.exceptions import TelegramBadRequest
+
 from app.lexicon import start as lex_start
 from app.lexicon import academy as lex_academy
 from app.lexicon import ai_testing as lex_ai_testing
-from app.lexicon import pricing as lex_pricing
+# from app.lexicon import pricing as lex_pricing
+from app.lexicon import ai_photoshoot as lex_ai_photoshoot
+from app.lexicon import social_network as lex_social_network
 from app.lexicon import jobs as lex_jobs
 from app.lexicon import webinar as lex_webinar
 from app.lexicon import ask_question as lex_ask_question
 from app.lexicon import corporate as lex_corporate
 from app.lexicon import program_view as lex_program
 from app.lexicon import experts as lex_experts
-from app.lexicon import ai_photoshoot as lex_photoshoot
+
 
 from app.button.factory import build_inline_kb
 
@@ -48,7 +50,7 @@ SCREENS: Dict[str, ScreenConfig] = {
         "photo",
         file_id="AgACAgIAAxkBAAID3Wk6yB_HoTJlf_k685IbR7D5e0LiAAIgDWsbmfrZSQdFTWT02w_0AQADAgADeQADNgQ",
         file_path="app/static/start/surfers_main.png"
-        ),
+    ),
     "academy": ScreenConfig(
         lex_academy,
         "academy_about",
@@ -64,16 +66,16 @@ SCREENS: Dict[str, ScreenConfig] = {
     "webinar_register": ScreenConfig(lex_webinar, "webinar_register_info", "webinar_register"),
 
     # главный экран вебинаров — с фото (пример)
-    "webinar": ScreenConfig(
-        text_module=lex_webinar,
-        text_key="webinar_main",
-        buttons_key="webinar",
-        media_type="photo",
-        file_id="AgACAgIAAxkBAAID02k6xgg2eiACMB8u84dt5boxDrqWAALVD2sbYZvYSfXauI7zn43wAQADAgADeQADNgQ",
-        file_path="app/static/webinar/efiry.png",
-    ),
-    "webinar_18": ScreenConfig(lex_webinar, "webinar_18_details", "webinar_18"),
-    "webinar_21": ScreenConfig(lex_webinar, "webinar_21_details", "webinar_21"),
+    # "webinar": ScreenConfig(
+    #     text_module=lex_webinar,
+    #     text_key="webinar_main",
+    #     buttons_key="webinar",
+    #     media_type="photo",
+    #     file_id="AgACAgIAAxkBAAID02k6xgg2eiACMB8u84dt5boxDrqWAALVD2sbYZvYSfXauI7zn43wAQADAgADeQADNgQ",
+    #     file_path="app/static/webinar/efiry.png",
+    # ),
+    # "webinar_18": ScreenConfig(lex_webinar, "webinar_18_details", "webinar_18"),
+    # "webinar_21": ScreenConfig(lex_webinar, "webinar_21_details", "webinar_21"),
 
 
     "ask_question": ScreenConfig(lex_ask_question, "ask_question_intro", "ask_question"),
@@ -87,7 +89,21 @@ SCREENS: Dict[str, ScreenConfig] = {
     ),
     "program": ScreenConfig(lex_program, "program_intro", "program_navigation"),
     "experts": ScreenConfig(lex_experts, "experts_intro", "experts_navigation", "photo"),
-    "ai_photoshoot": ScreenConfig(lex_photoshoot, "ai_photoshoot_intro", "ai_photoshoot"),
+    # "ai_photoshoot": ScreenConfig(lex_photoshoot, "ai_photoshoot_intro", "ai_photoshoot"),
+    # "ai_photoshoot": ScreenConfig(
+    #     lex_ai_photoshoot,
+    #     "ai_photoshoot_intro",
+    #     "ai_photoshoot",
+    #     media_type=None,
+    # ),
+    "social_network": ScreenConfig(
+        text_module=lex_social_network,
+        text_key="social_network_main",
+        buttons_key="social_network",
+        media_type="photo",
+        file_id="AgACAgIAAxkBAAID3Wk6yB_HoTJlf_k685IbR7D5e0LiAAIgDWsbmfrZSQdFTWT02w_0AQADAgADeQADNgQ",
+        file_path="app/static/start/surfers_main.png"
+    ),
     "jobs": ScreenConfig(
         text_module=lex_jobs,
         text_key="jobs_main",
@@ -341,204 +357,3 @@ async def show_screen(
         current_screen=screen_id,
         screen_message_id=screen_message_id,
     )
-# async def show_screen(
-#     target: Union[Message, CallbackQuery],
-#     state: FSMContext,
-#     bot: Bot,
-#     screen_id: str,
-#     *,
-#     as_new_message: bool = False,
-#     push_history: bool = True,
-# ):
-#     """
-#     Универсальный рендер экрана:
-#     - media_type = None  → обычный текст + инлайн-клавиатура
-#     - media_type задан   → экран с медиа (photo/document/video) + caption + инлайн-клава
-
-#     Для экранов с медиа:
-#       1) если это новый экран (as_new_message или нет screen_message_id) → отправляем новое медиа;
-#       2) если сообщение уже есть:
-#          - пробуем edit_message_media(...)
-#          - если ошибка → пробуем edit_message_caption(...)
-#          - если снова ошибка → удаляем сообщение и отправляем обычный текст.
-#     """
-
-#     if screen_id not in SCREENS:
-#         screen_id = "start"
-
-#     cfg = SCREENS[screen_id]
-
-#     data = await state.get_data()
-#     history = data.get("history", [])
-#     current = data.get("current_screen")
-#     screen_message_id = data.get("screen_message_id")
-
-#     # история экранов
-#     if push_history and current and current != screen_id:
-#         history.append(current)
-
-#     text = cfg.text_module.TEXTS[cfg.text_key]
-#     kb = build_inline_kb(cfg.buttons_key)
-
-#     # chat_id
-#     if isinstance(target, CallbackQuery):
-#         chat_id = target.message.chat.id
-#     else:
-#         chat_id = target.chat.id
-
-#     media_type = cfg.media_type
-#     file_id = cfg.file_id
-#     file_path = cfg.file_path
-
-#     # ===== ветка: только текст =====
-#     if media_type is None:
-#         if as_new_message or screen_message_id is None:
-#             if isinstance(target, CallbackQuery):
-#                 msg = await target.message.answer(text, reply_markup=kb)
-#             else:
-#                 msg = await target.answer(text, reply_markup=kb)
-#             screen_message_id = msg.message_id
-#         else:
-#             try:
-#                 await bot.edit_message_text(
-#                     chat_id=chat_id,
-#                     message_id=screen_message_id,
-#                     text=text,
-#                     reply_markup=kb,
-#                 )
-#             except TelegramBadRequest:
-#                 try:
-#                     await bot.delete_message(chat_id, screen_message_id)
-#                 except Exception:
-#                     pass
-#                 msg = await bot.send_message(chat_id, text, reply_markup=kb)
-#                 screen_message_id = msg.message_id
-
-#     # ===== ветка: экран с медиа =====
-#     else:
-#         # подготовка "файла"
-#         if file_id:
-#             media_input = file_id
-#         elif file_path:
-#             media_input = FSInputFile(file_path)
-#         else:
-#             # media_type есть, файла нет → деградируем в текст
-#             if as_new_message or screen_message_id is None:
-#                 if isinstance(target, CallbackQuery):
-#                     msg = await target.message.answer(text, reply_markup=kb)
-#                 else:
-#                     msg = await target.answer(text, reply_markup=kb)
-#                 screen_message_id = msg.message_id
-#             else:
-#                 try:
-#                     await bot.edit_message_text(
-#                         chat_id=chat_id,
-#                         message_id=screen_message_id,
-#                         text=text,
-#                         reply_markup=kb,
-#                     )
-#                 except TelegramBadRequest:
-#                     try:
-#                         await bot.delete_message(chat_id, screen_message_id)
-#                     except Exception:
-#                         pass
-#                     msg = await bot.send_message(chat_id, text, reply_markup=kb)
-#                     screen_message_id = msg.message_id
-
-#             await state.update_data(
-#                 history=history,
-#                 current_screen=screen_id,
-#                 screen_message_id=screen_message_id,
-#             )
-#             return
-
-#         # --- 1) НОВЫЙ ЭКРАН С МЕДИА ---
-#         if as_new_message or screen_message_id is None:
-#             if media_type == "photo":
-#                 msg = await bot.send_photo(
-#                     chat_id=chat_id,
-#                     photo=media_input,
-#                     caption=text,
-#                     reply_markup=kb,
-#                 )
-#             elif media_type == "document":
-#                 msg = await bot.send_document(
-#                     chat_id=chat_id,
-#                     document=media_input,
-#                     caption=text,
-#                     reply_markup=kb,
-#                 )
-#             elif media_type == "video":
-#                 msg = await bot.send_video(
-#                     chat_id=chat_id,
-#                     video=media_input,
-#                     caption=text,
-#                     reply_markup=kb,
-#                 )
-#             else:
-#                 msg = await bot.send_message(
-#                     chat_id=chat_id,
-#                     text=text,
-#                     reply_markup=kb,
-#                 )
-
-#             screen_message_id = msg.message_id
-
-#         # --- 2) ПЫТАЕМСЯ РЕДАКТИРОВАТЬ СУЩЕСТВУЮЩЕЕ МЕДИА ---
-#         else:
-#             edited = False
-
-#             # 2.1) сначала edit_message_media
-#             try:
-#                 input_media = None
-#                 if media_type == "photo":
-#                     input_media = InputMediaPhoto(media=media_input, caption=text)
-#                 elif media_type == "document":
-#                     input_media = InputMediaDocument(media=media_input, caption=text)
-#                 elif media_type == "video":
-#                     input_media = InputMediaVideo(media=media_input, caption=text)
-
-#                 if input_media is not None:
-#                     await bot.edit_message_media(
-#                         chat_id=chat_id,
-#                         message_id=screen_message_id,
-#                         media=input_media,
-#                         reply_markup=kb,
-#                     )
-#                     edited = True
-#             except TelegramBadRequest:
-#                 edited = False
-
-#             # 2.2) если не вышло — пробуем только caption
-#             if not edited:
-#                 try:
-#                     await bot.edit_message_caption(
-#                         chat_id=chat_id,
-#                         message_id=screen_message_id,
-#                         caption=text,
-#                         reply_markup=kb,
-#                     )
-#                     edited = True
-#                 except TelegramBadRequest:
-#                     edited = False
-
-#             # 2.3) если и это не удалось — удаляем и шлём текст
-#             if not edited:
-#                 try:
-#                     await bot.delete_message(chat_id, screen_message_id)
-#                 except Exception:
-#                     pass
-
-#                 msg = await bot.send_message(
-#                     chat_id=chat_id,
-#                     text=text,
-#                     reply_markup=kb,
-#                 )
-#                 screen_message_id = msg.message_id
-
-#     # сохраняем состояние
-#     await state.update_data(
-#         history=history,
-#         current_screen=screen_id,
-#         screen_message_id=screen_message_id,
-#     )

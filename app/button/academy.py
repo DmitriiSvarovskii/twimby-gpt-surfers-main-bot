@@ -6,6 +6,7 @@ BUTTONS = {
         {"text": "Эксперты", "callback": "experts"},
         {"text": "Тарифы", "callback": "pricing"},
         {"text": "Корпоративное обучение", "callback": "corporate"},
+        {"text": "Наши социальные сети", "callback": "social_network"},
         {"text": "Назад", "callback": "back"},
     ]
 }
