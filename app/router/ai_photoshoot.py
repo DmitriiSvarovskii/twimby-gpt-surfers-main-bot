@@ -298,9 +298,6 @@ def _get_screen_message_id(callback: CallbackQuery, state_data: dict) -> int:
 # =====================================================================
 @router.callback_query(F.data == "ai_photoshoot")
 async def open_ai_photoshoot(callback: CallbackQuery, state: FSMContext, bot: Bot):
-    if callback.from_user.id not in (496227914, 1635251787, 373744699, 606825877):
-        await callback.answer("Данный раздел в разработке, скоро будет доступен ☺️", show_alert=True)
-        return
     data = await state.get_data()
     prev_screen = data.get("current_screen") or "start"
 
