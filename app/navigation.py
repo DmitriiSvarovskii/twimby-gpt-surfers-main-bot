@@ -99,7 +99,8 @@ SCREENS: Dict[str, ScreenConfig] = {
         text_key="admin_about",
         buttons_key="admin_main",
         media_type="photo",
-        file_id="AgACAgIAAxkBAAIGXGlGsFOEKXE1IRH0NGJD09VMOiqwAAKwEWsb-T4xSlprMLKzwbq1AQADAgADeQADNgQ",
+        file_id="AgACAgIAAxkBAAIKvmlHRrC6iWxaE8GZMEB1efNUwbrxAAKwEWsb-T4xSpqt7L7lcSFSAQADAgADeQADNgQ",
+        # file_id="AgACAgIAAxkBAAIGXGlGsFOEKXE1IRH0NGJD09VMOiqwAAKwEWsb-T4xSlprMLKzwbq1AQADAgADeQADNgQ",
         file_path="app/static/admin/admin_panel.jpg",
     ),
 }
