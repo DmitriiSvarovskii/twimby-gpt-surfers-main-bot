@@ -1,5 +1,5 @@
 from aiogram.fsm.context import FSMContext
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.filters import CommandStart
 from aiogram import Bot
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.navigation import show_screen
 from app.schema.user import UserCreate
 from app.services.users.service import get_or_create_user
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+
+def kb_after_photos() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="go_start_new")],
+        ]
+    )
+
 
 router = Router(name=__name__)
 
@@ -62,6 +72,67 @@ async def process_start_command(
     )
 
 
+@router.callback_query(F.data == "go_start_new")
+async def go_start_new(callback: types.CallbackQuery, state: FSMContext, bot: Bot):
+    await callback.message.delete()
+    await show_screen(
+        target=callback,
+        state=state,
+        bot=bot,
+        screen_id="start",
+        as_new_message=True,
+        push_history=False,
+    )
+    await callback.answer()
+
+
+# @router.message(F.photo | F.document)
+# async def catch_media_and_log_file_id(message: types.Message):
+#     """
+#     Ловим:
+#     - фото → берём file_id последней (самой большой) версии
+#     - документ с mime_type application/pdf → берём file_id документа
+
+#     И выводим всё в print.
+#     """
+#     user = message.from_user
+#     user_part = ""
+#     if user:
+#         user_bits = [f"ID: {user.id}"]
+#         if user.username:
+#             user_bits.append(f"@{user.username}")
+#         name_bits = []
+#         if user.first_name:
+#             name_bits.append(user.first_name)
+#         if user.last_name:
+#             name_bits.append(user.last_name)
+#         if name_bits:
+#             user_bits.append(" ".join(name_bits))
+#         user_part = " | ".join(user_bits)
+
+#     # Фото
+#     if message.photo:
+#         file_id = message.photo[-1].file_id
+#         print(
+#             "🖼 Получено фото\n"
+#             f"{user_part}\n"
+#             f"file_id: {file_id}\n"
+#             "----------------------"
+#         )
+#         return
+
+#     # Документ (PDF)
+#     if message.document and message.document.mime_type == "application/pdf":
+#         file_id = message.document.file_id
+#         file_name = message.document.file_name or "без имени"
+#         print(
+#             "📄 Получен PDF-документ\n"
+#             f"{user_part}\n"
+#             f"Название файла: {file_name}\n"
+#             f"file_id: {file_id}\n"
+#             "----------------------"
+#         )
+#         return
 # @router.message(F.photo | F.document)
 # async def catch_media_and_log_file_id(message: types.Message, bot: Bot):
 #     """

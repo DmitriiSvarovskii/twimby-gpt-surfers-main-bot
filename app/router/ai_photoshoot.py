@@ -1,3 +1,4 @@
+# /app/router/ai_photoshoot.py
 from __future__ import annotations
 from app.services.users.flags import mark_user_photos_generated
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +11,8 @@ from typing import Dict
 import os
 import asyncio
 
+from app.keyboard.start import kb_after_photos
+from app.config import settings
 from typing import Optional
 import aiohttp
 import tempfile
@@ -91,16 +94,18 @@ async def _run_photoshoot_background(
 
         media = [InputMediaDocument(media=FSInputFile(path)) for path in temp_files]
 
-        # caption можно только у первого элемента
-        # media[0].caption = "✅ Готово!"
-        # media[0].parse_mode = "HTML"
-
         await bot.send_media_group(chat_id=chat_id, media=media)
 
+    # 3️⃣ сообщение с клавиатурой
+        await bot.send_message(
+            chat_id=chat_id,
+            text='Аватарки готовы!',
+            reply_markup=kb_after_photos(),
+        )
+
     except Exception as e:
-        # logger.exception("Photoshoot generation failed")
         try:
-            await bot.send_message(chat_id=chat_id, text=f"⚠️ Ошибка генерации: {e}")
+            await bot.send_message(chat_id=settings.ADMINT_CHAT, text=f"⚠️ Ошибка генерации у пользователя {chat_id}: {e}")
         except Exception:
             pass
 
@@ -566,7 +571,7 @@ async def ai_ps_confirm(callback: CallbackQuery, state: FSMContext, bot: Bot, se
     reference_file_ids = list(uploaded_file_ids)
 
     await callback.answer(
-        "Ок! Фотосессия сгенерируется, результаты отправлю в чат ✅",
+        "Фото сгенерируются в течении 5 минут, результаты лови в чате 🏄🏻‍♂️",
         show_alert=True,
     )
 

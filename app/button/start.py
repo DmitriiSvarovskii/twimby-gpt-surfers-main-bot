@@ -7,5 +7,6 @@ BUTTONS = {
         {"text": "Корпоративное обучение", "callback": "corporate"},
         {"text": "Задать вопрос", "callback": "ask_question"},
         {"text": "Вакансии", "callback": "jobs"},
+        {"text": "Админка", "callback": "admin", "admin_only": True},
     ]
 }

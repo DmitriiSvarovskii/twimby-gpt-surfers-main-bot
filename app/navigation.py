@@ -25,6 +25,7 @@ from app.lexicon import ask_question as lex_ask_question
 from app.lexicon import corporate as lex_corporate
 from app.lexicon import program_view as lex_program
 from app.lexicon import experts as lex_experts
+from app.lexicon import admin as lex_admin
 
 
 from app.button.factory import build_inline_kb
@@ -65,19 +66,6 @@ SCREENS: Dict[str, ScreenConfig] = {
     "webinar_announce": ScreenConfig(lex_webinar, "webinar_announce", "webinar_announce"),
     "webinar_register": ScreenConfig(lex_webinar, "webinar_register_info", "webinar_register"),
 
-    # главный экран вебинаров — с фото (пример)
-    # "webinar": ScreenConfig(
-    #     text_module=lex_webinar,
-    #     text_key="webinar_main",
-    #     buttons_key="webinar",
-    #     media_type="photo",
-    #     file_id="AgACAgIAAxkBAAID02k6xgg2eiACMB8u84dt5boxDrqWAALVD2sbYZvYSfXauI7zn43wAQADAgADeQADNgQ",
-    #     file_path="app/static/webinar/efiry.png",
-    # ),
-    # "webinar_18": ScreenConfig(lex_webinar, "webinar_18_details", "webinar_18"),
-    # "webinar_21": ScreenConfig(lex_webinar, "webinar_21_details", "webinar_21"),
-
-
     "ask_question": ScreenConfig(lex_ask_question, "ask_question_intro", "ask_question"),
     "corporate": ScreenConfig(
         lex_corporate,
@@ -89,13 +77,7 @@ SCREENS: Dict[str, ScreenConfig] = {
     ),
     "program": ScreenConfig(lex_program, "program_intro", "program_navigation"),
     "experts": ScreenConfig(lex_experts, "experts_intro", "experts_navigation", "photo"),
-    # "ai_photoshoot": ScreenConfig(lex_photoshoot, "ai_photoshoot_intro", "ai_photoshoot"),
-    # "ai_photoshoot": ScreenConfig(
-    #     lex_ai_photoshoot,
-    #     "ai_photoshoot_intro",
-    #     "ai_photoshoot",
-    #     media_type=None,
-    # ),
+
     "social_network": ScreenConfig(
         text_module=lex_social_network,
         text_key="social_network_main",
@@ -111,6 +93,14 @@ SCREENS: Dict[str, ScreenConfig] = {
         media_type="photo",
         file_id="AgACAgIAAxkBAAID12k6xqLDbHPD-r7J9vvz1TXyF2sVAAIVDWsbmfrZScLVmgTc4C9dAQADAgADeQADNgQ",
         file_path="app/static/jobs.jpg",
+    ),
+    "admin_main": ScreenConfig(
+        text_module=lex_admin,
+        text_key="admin_about",
+        buttons_key="admin_main",
+        media_type="photo",
+        file_id="AgACAgIAAxkBAAIGXGlGsFOEKXE1IRH0NGJD09VMOiqwAAKwEWsb-T4xSlprMLKzwbq1AQADAgADeQADNgQ",
+        file_path="app/static/admin/admin_panel.jpg",
     ),
 }
 
@@ -153,7 +143,12 @@ async def show_screen(
         history.append(current)
 
     text = cfg.text_module.TEXTS[cfg.text_key]
-    kb = build_inline_kb(cfg.buttons_key)
+    if isinstance(target, CallbackQuery):
+        tg_id = target.from_user.id if target.from_user else None
+    else:
+        tg_id = target.from_user.id if target.from_user else None
+
+    kb = build_inline_kb(cfg.buttons_key, tg_id=tg_id)
 
     # chat_id
     if isinstance(target, CallbackQuery):

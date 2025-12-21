@@ -19,6 +19,9 @@ class Settings(BaseSettings):
 
     ADMINT_CHAT: str
     TELEGRAM_CHANEL: int
+    ADMIN_TG_IDS: list[int]
+
+    BROADCAST_GLOBAL_DELAY: float = 0.05
 
     @property
     def DB_URL(self):

@@ -159,7 +159,7 @@ class KieNanoBananaClient:
         task_id: str,
         *,
         poll_every_sec: float = 2.0,
-        max_wait_sec: float = 180.0,
+        max_wait_sec: float = 600.0,
     ) -> KieTaskResult:
         self._d(f"wait_images start task={task_id} poll={poll_every_sec}s timeout={max_wait_sec}s")
 

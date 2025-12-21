@@ -255,7 +255,7 @@ async def generate_photoshoot_pack(
         done = await client.wait_images(
             task_id,
             poll_every_sec=2.0,
-            max_wait_sec=360.0,
+            max_wait_sec=600.0,
         )
 
         if not done.image_urls:
