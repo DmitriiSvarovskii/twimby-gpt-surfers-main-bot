@@ -269,13 +269,6 @@ async def broadcast_start(
     await callback.answer("Рассылка запущена ✅\nВам придёт отчёт по завершению.", show_alert=True)
     await cleanup_broadcast_ui(bot, state, chat_id=callback.message.chat.id)
 
-    # удаляем “контент” сообщение админа (если оно в том же чате)
-    # try:
-    #     if callback.message.chat.id == content_chat_id:
-    #         await bot.delete_message(content_chat_id, content_message_id)
-    # except Exception:
-    #     pass
-
     # чистим state и возвращаем в админку
     await show_screen(callback, state, bot, "admin_main", push_history=False)
     await clear_broadcast_only(state)

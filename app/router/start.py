@@ -135,7 +135,7 @@ async def go_start_new(callback: types.CallbackQuery, state: FSMContext, bot: Bo
 #         return
 
 
-@router.message(F.photo | F.document)
+#@router.message(F.photo | F.document)
 async def catch_media_and_log_file_id(message: types.Message, bot: Bot):
     """
     Ловим:

@@ -1,3 +1,4 @@
+from aiogram.types import MessageEntity
 from aiogram import types
 import asyncio
 from aiogram import Bot
@@ -54,18 +55,22 @@ async def broadcast_job(
     )
 
 
+def _dump_entities(entities: list[types.MessageEntity] | None):
+    if not entities:
+        return None
+    return [e.model_dump() for e in entities]
+
+
 def serialize_message(m: types.Message) -> dict:
-    # текст
     if m.text:
         return {
             "type": "text",
             "text": m.text,
-            "entities": m.entities,   # важно для ссылок/жирного и т.п.
+            "entities": _dump_entities(m.entities),  # ✅ вместо объектов
         }
 
-    # подпись (caption) + сущности подписи
     caption = m.caption or None
-    caption_entities = m.caption_entities or None
+    caption_entities = _dump_entities(m.caption_entities)
 
     # медиа по file_id
     if m.photo:
@@ -92,11 +97,21 @@ def serialize_message(m: types.Message) -> dict:
     return {"type": "unsupported"}
 
 
+def _load_entities(entities: list[dict] | None):
+    if not entities:
+        return None
+    return [MessageEntity(**e) for e in entities]
+
+
 async def send_payload(bot, chat_id: int, payload: dict):
     t = payload["type"]
 
     if t == "text":
-        return await bot.send_message(chat_id, payload["text"], entities=payload.get("entities"))
+        return await bot.send_message(
+            chat_id,
+            payload["text"],
+            entities=_load_entities(payload.get("entities")),  # ✅ восстановили
+        )
 
     kw = {}
     if payload.get("caption") is not None:
