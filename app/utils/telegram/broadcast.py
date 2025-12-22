@@ -103,7 +103,7 @@ def _load_entities(entities: list[dict] | None):
     return [MessageEntity(**e) for e in entities]
 
 
-async def send_payload(bot, chat_id: int, payload: dict):
+async def send_payload(bot: Bot, chat_id: int, payload: dict):
     t = payload["type"]
 
     if t == "text":
@@ -111,9 +111,10 @@ async def send_payload(bot, chat_id: int, payload: dict):
             chat_id,
             payload["text"],
             entities=_load_entities(payload.get("entities")),  # ✅ восстановили
+            parse_mode=None,
         )
 
-    kw = {}
+    kw = {"parse_mode": None}
     if payload.get("caption") is not None:
         kw["caption"] = payload["caption"]
     if payload.get("caption_entities") is not None:
