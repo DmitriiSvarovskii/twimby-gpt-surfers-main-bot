@@ -314,8 +314,12 @@ async def send_payload(bot: Bot, chat_id: int, payload: dict):
             it_type = it["type"]
             file_id = it["file_id"]
 
+            # caption + entities только на первом элементе
             c = caption if i == 0 else None
             ce = caption_entities if i == 0 else None
+
+            # ВАЖНО: если передаём entities — parse_mode должен быть None (а не Default)
+            pm = None if i == 0 else None
 
             if it_type == "photo":
                 media.append(
@@ -323,40 +327,39 @@ async def send_payload(bot: Bot, chat_id: int, payload: dict):
                         media=file_id,
                         caption=c,
                         caption_entities=ce,
+                        parse_mode=pm,
                         has_spoiler=bool(it.get("has_spoiler", False)),
                     )
                 )
-
             elif it_type == "video":
                 media.append(
                     InputMediaVideo(
                         media=file_id,
                         caption=c,
                         caption_entities=ce,
+                        parse_mode=pm,
                         has_spoiler=bool(it.get("has_spoiler", False)),
                     )
                 )
-
             elif it_type == "document":
                 media.append(
                     InputMediaDocument(
                         media=file_id,
                         caption=c,
                         caption_entities=ce,
-                        # важно: в альбоме Telegram сам включает это, но можно явно:
-                        disable_content_type_detection=True,
+                        parse_mode=pm,
+                        # у document нет has_spoiler
                     )
                 )
-
             elif it_type == "audio":
                 media.append(
                     InputMediaAudio(
                         media=file_id,
                         caption=c,
                         caption_entities=ce,
+                        parse_mode=pm,
                     )
                 )
-
             else:
                 raise ValueError(f"Unsupported media_group item type: {it_type}")
 
