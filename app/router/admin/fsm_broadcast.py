@@ -146,6 +146,7 @@ async def broadcast_webinar_selected(callback: types.CallbackQuery, state: FSMCo
 
 @router.message(BroadcastStates.waiting_content)
 async def broadcast_receive_content(message: types.Message, state: FSMContext):
+    print(message)
     if not is_admin(message.from_user.id):
         return
 
@@ -387,8 +388,38 @@ async def clear_broadcast_only(state: FSMContext) -> None:
     await state.set_state(None)
 
 
+# async def _finalize_media_group(state: FSMContext, message: types.Message) -> None:
+#     # ждём, пока прилетят остальные элементы альбома
+#     await asyncio.sleep(0.8)
+
+#     data = await state.get_data()
+#     items = data.get("mg_items") or []
+#     if not items:
+#         return
+
+#     payload = {
+#         "type": "media_group",
+#         "items": items,  # list of {"type": photo/video, "file_id":..., "has_spoiler":...}
+#         "caption": data.get("mg_caption"),
+#         "caption_entities": data.get("mg_caption_entities"),
+#         "show_caption_above_media": data.get("mg_show_caption_above_media"),
+#     }
+
+#     await state.update_data(payload=payload)
+#     await state.set_state(BroadcastStates.confirm)
+
+#     msg = await message.answer(
+#         "Принято ✅ (альбом)\n\nПроверь контент. Могу отправить тест в чат админов.",
+#         reply_markup=kb_confirm(),
+#     )
+#     await track_broadcast_msg(state, msg)
+
+#     # подчистим временные ключи альбома (payload оставляем)
+#     d = await state.get_data()
+#     for k in MEDIA_GROUP_KEYS:
+#         d.pop(k, None)
+#     await state.set_data(d)
 async def _finalize_media_group(state: FSMContext, message: types.Message) -> None:
-    # ждём, пока прилетят остальные элементы альбома
     await asyncio.sleep(0.8)
 
     data = await state.get_data()
@@ -396,12 +427,25 @@ async def _finalize_media_group(state: FSMContext, message: types.Message) -> No
     if not items:
         return
 
+    types_in = {it["type"] for it in items}
+
+    # Правила Telegram:
+    # - document альбом: только documents
+    # - audio альбом: только audios
+    # - photo/video можно миксовать
+    if "document" in types_in and types_in != {"document"}:
+        await message.answer("Альбом с документами нельзя смешивать с фото/видео. Пришли только PDF одним альбомом.")
+        return
+    if "audio" in types_in and types_in != {"audio"}:
+        await message.answer("Альбом с аудио нельзя смешивать с другими типами. Пришли только аудио одним альбомом.")
+        return
+
     payload = {
         "type": "media_group",
-        "items": items,  # list of {"type": photo/video, "file_id":..., "has_spoiler":...}
+        "items": items,  # photo/video/document/audio
         "caption": data.get("mg_caption"),
         "caption_entities": data.get("mg_caption_entities"),
-        "show_caption_above_media": data.get("mg_show_caption_above_media"),
+        # show_caption_above_media для альбомов не поддерживается
     }
 
     await state.update_data(payload=payload)
@@ -413,7 +457,6 @@ async def _finalize_media_group(state: FSMContext, message: types.Message) -> No
     )
     await track_broadcast_msg(state, msg)
 
-    # подчистим временные ключи альбома (payload оставляем)
     d = await state.get_data()
     for k in MEDIA_GROUP_KEYS:
         d.pop(k, None)

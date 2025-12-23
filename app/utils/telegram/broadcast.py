@@ -1,3 +1,6 @@
+from aiogram.types import (
+    InputMediaPhoto, InputMediaVideo, InputMediaDocument, InputMediaAudio
+)
 from aiogram.types import InputMediaPhoto, InputMediaVideo
 from aiogram.types import MessageEntity
 from aiogram import types
@@ -134,14 +137,47 @@ def serialize_message(m: types.Message) -> dict:
 
 
 def serialize_media_group_item(m: types.Message) -> dict:
-    has_spoiler = bool(getattr(m, "has_media_spoiler", False))
-
+    # фото
     if m.photo:
-        return {"type": "photo", "file_id": m.photo[-1].file_id, "has_spoiler": has_spoiler}
+        return {
+            "type": "photo",
+            "file_id": m.photo[-1].file_id,
+            "has_spoiler": bool(getattr(m, "has_media_spoiler", False)),
+        }
+
+    # видео
     if m.video:
-        return {"type": "video", "file_id": m.video.file_id, "has_spoiler": has_spoiler}
+        return {
+            "type": "video",
+            "file_id": m.video.file_id,
+            "has_spoiler": bool(getattr(m, "has_media_spoiler", False)),
+        }
+
+    # документ (PDF сюда тоже попадает)
+    if m.document:
+        return {
+            "type": "document",
+            "file_id": m.document.file_id,
+            # spoiler для document НЕ существует
+        }
+
+    # аудио (если надо)
+    if m.audio:
+        return {
+            "type": "audio",
+            "file_id": m.audio.file_id,
+        }
 
     return {"type": "unsupported"}
+# def serialize_media_group_item(m: types.Message) -> dict:
+#     has_spoiler = bool(getattr(m, "has_media_spoiler", False))
+
+#     if m.photo:
+#         return {"type": "photo", "file_id": m.photo[-1].file_id, "has_spoiler": has_spoiler}
+#     if m.video:
+#         return {"type": "video", "file_id": m.video.file_id, "has_spoiler": has_spoiler}
+
+#     return {"type": "unsupported"}
 
 
 def _load_entities(entities: list[dict] | None):
@@ -150,9 +186,80 @@ def _load_entities(entities: list[dict] | None):
     return [MessageEntity(**e) for e in entities]
 
 
+# async def send_payload(bot: Bot, chat_id: int, payload: dict):
+#     t = payload["type"]
+
+#     if t == "text":
+#         return await bot.send_message(
+#             chat_id,
+#             payload["text"],
+#             entities=_load_entities(payload.get("entities")),
+#             parse_mode=None,
+#         )
+
+#     # ✅ альбом
+#     if t == "media_group":
+#         caption = payload.get("caption")
+#         caption_entities = _load_entities(payload.get("caption_entities"))
+
+#         media = []
+#         for i, it in enumerate(payload["items"]):
+#             it_type = it["type"]
+#             file_id = it["file_id"]
+#             has_spoiler = bool(it.get("has_spoiler", False))
+
+#             # caption + entities только на первом элементе
+#             c = caption if i == 0 else None
+#             ce = caption_entities if i == 0 else None
+
+#             if it_type == "photo":
+#                 media.append(InputMediaPhoto(media=file_id, caption=c, caption_entities=ce, has_spoiler=has_spoiler))
+#             elif it_type == "video":
+#                 media.append(InputMediaVideo(media=file_id, caption=c, caption_entities=ce, has_spoiler=has_spoiler))
+#             else:
+#                 raise ValueError(f"Unsupported media_group item type: {it_type}")
+
+#         # show_caption_above_media у send_media_group нет — Telegram не даёт это для альбомов стабильно
+#         return await bot.send_media_group(chat_id=chat_id, media=media)
+
+#     # ✅ одиночные медиа
+#     kw = {"parse_mode": None}
+
+#     if payload.get("caption") is not None:
+#         kw["caption"] = payload["caption"]
+#     if payload.get("caption_entities") is not None:
+#         kw["caption_entities"] = _load_entities(payload["caption_entities"])
+
+#     if payload.get("has_spoiler") is not None:
+#         kw["has_spoiler"] = bool(payload["has_spoiler"])
+
+#     if payload.get("show_caption_above_media") is not None:
+#         kw["show_caption_above_media"] = payload["show_caption_above_media"]
+
+#     if t == "photo":
+#         return await bot.send_photo(chat_id, payload["file_id"], **kw)
+#     if t == "video":
+#         return await bot.send_video(chat_id, payload["file_id"], **kw)
+#     if t == "document":
+#         return await bot.send_document(chat_id, payload["file_id"], **kw)
+#     if t == "audio":
+#         return await bot.send_audio(chat_id, payload["file_id"], **kw)
+#     if t == "voice":
+#         return await bot.send_voice(chat_id, payload["file_id"], **kw)
+#     if t == "animation":
+#         return await bot.send_animation(chat_id, payload["file_id"], **kw)
+#     if t == "sticker":
+#         return await bot.send_sticker(chat_id, payload["file_id"])
+#     if t == "video_note":
+#         return await bot.send_video_note(chat_id, payload["file_id"])
+
+#     raise ValueError(f"Unsupported payload type: {t}")
+
+
 async def send_payload(bot: Bot, chat_id: int, payload: dict):
     t = payload["type"]
 
+    # ✅ текст
     if t == "text":
         return await bot.send_message(
             chat_id,
@@ -161,7 +268,43 @@ async def send_payload(bot: Bot, chat_id: int, payload: dict):
             parse_mode=None,
         )
 
-    # ✅ альбом
+    # ✅ batch: последовательная отправка нескольких файлов (PDF/документы/что угодно)
+    # if t == "batch":
+    #     last_msg = None
+    #     for i, it in enumerate(payload["items"]):
+    #         it_type = it["type"]
+    #         file_id = it["file_id"]
+
+    #         kw = {"parse_mode": None}
+
+    #         if it.get("caption") is not None:
+    #             kw["caption"] = it["caption"]
+    #         if it.get("caption_entities") is not None:
+    #             kw["caption_entities"] = _load_entities(it["caption_entities"])
+
+    #         # ⛔️ НЕ добавляем has_spoiler по умолчанию
+
+    #         if it_type in ("photo", "video"):
+    #             if it.get("has_spoiler") is not None:
+    #                 kw["has_spoiler"] = bool(it["has_spoiler"])
+
+    #         if it_type == "document":
+    #             last_msg = await bot.send_document(chat_id, file_id, **kw)
+
+    #         elif it_type == "photo":
+    #             last_msg = await bot.send_photo(chat_id, file_id, **kw)
+
+    #         elif it_type == "video":
+    #             last_msg = await bot.send_video(chat_id, file_id, **kw)
+
+    #         else:
+    #             raise ValueError(f"Unsupported batch item type: {it_type}")
+
+    #         await asyncio.sleep(settings.BROADCAST_GLOBAL_DELAY)
+
+    #     return last_msg
+
+    # ✅ media_group: только фото/видео
     if t == "media_group":
         caption = payload.get("caption")
         caption_entities = _load_entities(payload.get("caption_entities"))
@@ -170,20 +313,53 @@ async def send_payload(bot: Bot, chat_id: int, payload: dict):
         for i, it in enumerate(payload["items"]):
             it_type = it["type"]
             file_id = it["file_id"]
-            has_spoiler = bool(it.get("has_spoiler", False))
 
-            # caption + entities только на первом элементе
             c = caption if i == 0 else None
             ce = caption_entities if i == 0 else None
 
             if it_type == "photo":
-                media.append(InputMediaPhoto(media=file_id, caption=c, caption_entities=ce, has_spoiler=has_spoiler))
+                media.append(
+                    InputMediaPhoto(
+                        media=file_id,
+                        caption=c,
+                        caption_entities=ce,
+                        has_spoiler=bool(it.get("has_spoiler", False)),
+                    )
+                )
+
             elif it_type == "video":
-                media.append(InputMediaVideo(media=file_id, caption=c, caption_entities=ce, has_spoiler=has_spoiler))
+                media.append(
+                    InputMediaVideo(
+                        media=file_id,
+                        caption=c,
+                        caption_entities=ce,
+                        has_spoiler=bool(it.get("has_spoiler", False)),
+                    )
+                )
+
+            elif it_type == "document":
+                media.append(
+                    InputMediaDocument(
+                        media=file_id,
+                        caption=c,
+                        caption_entities=ce,
+                        # важно: в альбоме Telegram сам включает это, но можно явно:
+                        disable_content_type_detection=True,
+                    )
+                )
+
+            elif it_type == "audio":
+                media.append(
+                    InputMediaAudio(
+                        media=file_id,
+                        caption=c,
+                        caption_entities=ce,
+                    )
+                )
+
             else:
                 raise ValueError(f"Unsupported media_group item type: {it_type}")
 
-        # show_caption_above_media у send_media_group нет — Telegram не даёт это для альбомов стабильно
         return await bot.send_media_group(chat_id=chat_id, media=media)
 
     # ✅ одиночные медиа
