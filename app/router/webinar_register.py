@@ -3,7 +3,6 @@ from datetime import datetime, timezone
 from app.services.webinars.cache import CachedWebinar
 from aiogram.fsm.context import FSMContext
 
-from datetime import timezone
 
 from aiogram import Router, F, Bot
 from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile, InputMediaPhoto
@@ -62,6 +61,14 @@ def _kb_webinar_detail(webinar_id: int) -> InlineKeyboardMarkup:
     )
 
 
+async def push_history(state: FSMContext, screen: str) -> None:
+    data = await state.get_data()
+    hist = list(data.get("history") or ["start"])
+    if not hist or hist[-1] != screen:
+        hist.append(screen)
+        await state.update_data(history=hist)
+
+
 @router.callback_query(F.data == "webinar_main")
 async def webinar_main(callback: CallbackQuery, state, bot: Bot):
     chat_id = callback.message.chat.id
@@ -101,7 +108,7 @@ async def webinar_main(callback: CallbackQuery, state, bot: Bot):
             )
         except Exception:
             await bot.send_photo(chat_id, FSInputFile(photo_path), caption=text, reply_markup=kb, parse_mode="HTML")
-
+    await push_history(state, "webinar_main")
     await callback.answer()
 
 

@@ -1,3 +1,4 @@
+from collections import defaultdict
 import asyncio
 from aiogram import Router, F, Bot, types
 from aiogram.fsm.context import FSMContext
@@ -23,12 +24,12 @@ from app.keyboard.admin.broadcast import (
     kb_start,
 )
 from app.utils.check_admin import is_admin
-from app.utils.telegram.broadcast import serialize_message, send_payload
+from app.utils.telegram.broadcast import serialize_message, send_payload, serialize_media_group_item, _dump_entities
 
 router = Router()
 
-# !!! прокинь в DI/контейнер async_sessionmaker (или создай один глобально)
-# допустим, у тебя есть dependency session_factory: async_sessionmaker[AsyncSession]
+
+_mg_locks = defaultdict(asyncio.Lock)
 
 
 @router.callback_query(F.data == "message_broadcast")
@@ -148,6 +149,53 @@ async def broadcast_receive_content(message: types.Message, state: FSMContext):
     if not is_admin(message.from_user.id):
         return
 
+    # ✅ альбом
+    if message.media_group_id:
+        lock = _mg_locks[(message.chat.id, message.from_user.id)]
+        async with lock:
+            item = serialize_media_group_item(message)
+            if item["type"] == "unsupported":
+                await message.answer("В альбоме поддерживаю только фото/видео.")
+                return
+
+            data = await state.get_data()
+            admin_ids = data.get("admin_content_message_ids") or []
+            admin_ids.append(message.message_id)
+            await state.update_data(
+                admin_content_chat_id=message.chat.id,
+                admin_content_message_ids=admin_ids,
+            )
+            if data.get("mg_id") != message.media_group_id:
+                await state.update_data(
+                    mg_id=message.media_group_id,
+                    mg_items=[],
+                    mg_caption=None,
+                    mg_caption_entities=None,
+                    mg_show_caption_above_media=None,
+                    mg_finalize_scheduled=False,
+                )
+                data = await state.get_data()
+
+            mg_items = data.get("mg_items") or []
+            mg_items.append(item)
+            await state.update_data(mg_items=mg_items)
+
+            if message.caption:
+                await state.update_data(
+                    mg_caption=message.caption,
+                    mg_caption_entities=_dump_entities(message.caption_entities),
+                    mg_show_caption_above_media=getattr(message, "show_caption_above_media", None),
+                )
+
+            # ✅ теперь точно один раз
+            data = await state.get_data()
+            if not data.get("mg_finalize_scheduled"):
+                await state.update_data(mg_finalize_scheduled=True)
+                asyncio.create_task(_finalize_media_group(state, message))
+
+        return
+
+    # ✅ одиночное сообщение
     payload = serialize_message(message)
     if payload["type"] == "unsupported":
         await message.answer(
@@ -156,10 +204,13 @@ async def broadcast_receive_content(message: types.Message, state: FSMContext):
         )
         return
 
-    # сохраняем payload вместо message_id
-    await state.update_data(payload=payload)
-    await state.set_state(BroadcastStates.confirm)
+    await state.update_data(
+        payload=payload,
+        admin_content_chat_id=message.chat.id,
+        admin_content_message_ids=[message.message_id],
 
+    )
+    await state.set_state(BroadcastStates.confirm)
     msg = await message.answer(
         "Принято ✅\n\nПроверь контент. Могу отправить тест в чат админов.",
         reply_markup=kb_confirm(),
@@ -211,8 +262,8 @@ async def broadcast_send_test(
     text = f"Запустить рассылку по <b>{len(recipients)}</b> пользователям?"
 
     try:
-        await callback.message.edit_caption(
-            caption=text,
+        await callback.message.edit_text(
+            text=text,
             reply_markup=kb_start(len(recipients)),
             parse_mode="HTML",
         )
@@ -281,6 +332,17 @@ BROADCAST_KEYS = {
     "content_message_id",
     "recipients_count",
     "broadcast_msg_ids",  # ✅ новые
+    "admin_content_chat_id",
+    "admin_content_message_ids",  # list[int]
+}
+
+MEDIA_GROUP_KEYS = {
+    "mg_id",
+    "mg_items",
+    "mg_caption",
+    "mg_caption_entities",
+    "mg_show_caption_above_media",
+    "mg_finalize_scheduled",
 }
 
 
@@ -297,15 +359,16 @@ async def cleanup_broadcast_ui(bot: Bot, state: FSMContext, chat_id: int) -> Non
     и (если есть) удаляет сообщение-контент админа.
     """
     data = await state.get_data()
-
     # 1) удаляем "контент" сообщение админа (которое он прислал для рассылки)
-    content_chat_id = data.get("content_chat_id")
-    content_message_id = data.get("content_message_id")
-    if content_chat_id and content_message_id:
-        try:
-            await bot.delete_message(content_chat_id, content_message_id)
-        except Exception:
-            pass
+    admin_chat_id = data.get("admin_content_chat_id")
+    admin_message_ids = data.get("admin_content_message_ids") or []
+
+    if admin_chat_id and admin_message_ids:
+        for mid in admin_message_ids:
+            try:
+                await bot.delete_message(admin_chat_id, mid)
+            except Exception:
+                pass
 
     # 2) удаляем сообщения бота, которые мы отправляли (answer())
     msg_ids = data.get("broadcast_msg_ids") or []
@@ -322,3 +385,36 @@ async def clear_broadcast_only(state: FSMContext) -> None:
         data.pop(k, None)
     await state.set_data(data)
     await state.set_state(None)
+
+
+async def _finalize_media_group(state: FSMContext, message: types.Message) -> None:
+    # ждём, пока прилетят остальные элементы альбома
+    await asyncio.sleep(0.8)
+
+    data = await state.get_data()
+    items = data.get("mg_items") or []
+    if not items:
+        return
+
+    payload = {
+        "type": "media_group",
+        "items": items,  # list of {"type": photo/video, "file_id":..., "has_spoiler":...}
+        "caption": data.get("mg_caption"),
+        "caption_entities": data.get("mg_caption_entities"),
+        "show_caption_above_media": data.get("mg_show_caption_above_media"),
+    }
+
+    await state.update_data(payload=payload)
+    await state.set_state(BroadcastStates.confirm)
+
+    msg = await message.answer(
+        "Принято ✅ (альбом)\n\nПроверь контент. Могу отправить тест в чат админов.",
+        reply_markup=kb_confirm(),
+    )
+    await track_broadcast_msg(state, msg)
+
+    # подчистим временные ключи альбома (payload оставляем)
+    d = await state.get_data()
+    for k in MEDIA_GROUP_KEYS:
+        d.pop(k, None)
+    await state.set_data(d)

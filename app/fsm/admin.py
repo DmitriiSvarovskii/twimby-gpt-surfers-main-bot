@@ -7,3 +7,12 @@ class BroadcastStates(StatesGroup):
     waiting_content = State()
     confirm = State()
     ready = State()
+
+
+class WebinarCreateStates(StatesGroup):
+    title = State()
+    description_small = State()
+    description_full = State()
+    date = State()
+    time = State()
+    confirm = State()

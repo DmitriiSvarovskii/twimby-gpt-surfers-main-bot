@@ -20,7 +20,7 @@ async def admin_panel(callback: types.CallbackQuery, state: FSMContext, bot: Bot
         await callback.answer("Нет доступа ❌", show_alert=True)
         return
     await callback.answer()
-    await show_screen(callback, state, bot, "admin_main")
+    await show_screen(callback, state, bot, "admin_main", push_history=True)
 
 
 def _kb_back() -> InlineKeyboardMarkup:
